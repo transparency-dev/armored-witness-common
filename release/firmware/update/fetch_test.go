@@ -45,7 +45,9 @@ func TestFetcher(t *testing.T) {
 	}
 	f := NewHttpFetcher(logClient, vkey)
 
-	f.Scan()
+	if err := f.Scan(); err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
 
 	os, applet, err := f.GetLatestVersions()
 	if err != nil {
@@ -69,7 +71,9 @@ func TestFetcher(t *testing.T) {
 		},
 	}...)
 
-	f.Scan()
+	if err := f.Scan(); err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
 	os, applet, err = f.GetLatestVersions()
 	if err != nil {
 		t.Fatalf("GetLatestVersions(): %v", err)
