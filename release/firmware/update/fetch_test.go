@@ -15,22 +15,23 @@
 package update
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/transparency-dev/armored-witness-common/release/firmware/ftlog"
-	"github.com/transparency-dev/formats/log"
 	"golang.org/x/mod/sumdb/note"
 )
 
 const (
-	vkey = "ArmoredWitnessFirmwareLog+3e6f9306+ARjETaImkiqXZCH5pk1XtfX0tHgFhi1qGIxQqT6231S1"
-	skey = "PRIVATE+KEY+ArmoredWitnessFirmwareLog+3e6f9306+AYJIjPyyT5wKmBQ8duU8Bwl2ZSslUmrMgwdTUChHKEag"
+	testOrigin = "testlog"
+	testVkey   = "ArmoredWitnessFirmwareLog+3e6f9306+ARjETaImkiqXZCH5pk1XtfX0tHgFhi1qGIxQqT6231S1"
+	testSkey   = "PRIVATE+KEY+ArmoredWitnessFirmwareLog+3e6f9306+AYJIjPyyT5wKmBQ8duU8Bwl2ZSslUmrMgwdTUChHKEag"
 )
 
 func TestFetcher(t *testing.T) {
+	ctx := context.Background()
+	lv := mustNewVerifier(t, testVkey)
 	logClient := &fakeLogClient{
 		releases: []ftlog.FirmwareRelease{
 			{
@@ -43,13 +44,16 @@ func TestFetcher(t *testing.T) {
 			},
 		},
 	}
-	f := NewHttpFetcher(logClient, vkey)
+	f, err := NewLogFetcher(ctx, logClient.GetBinary, nil, testOrigin, lv, nil)
+	if err != nil {
+		t.Fatalf("NewLogFetcher: %v", err)
+	}
 
-	if err := f.Scan(); err != nil {
+	if err := f.Scan(ctx); err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
 
-	os, applet, err := f.GetLatestVersions()
+	os, applet, err := f.GetLatestVersions(ctx)
 	if err != nil {
 		t.Fatalf("GetLatestVersions(): %v", err)
 	}
@@ -71,10 +75,10 @@ func TestFetcher(t *testing.T) {
 		},
 	}...)
 
-	if err := f.Scan(); err != nil {
+	if err := f.Scan(ctx); err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
-	os, applet, err = f.GetLatestVersions()
+	os, applet, err = f.GetLatestVersions(ctx)
 	if err != nil {
 		t.Fatalf("GetLatestVersions(): %v", err)
 	}
@@ -90,34 +94,15 @@ type fakeLogClient struct {
 	releases []ftlog.FirmwareRelease
 }
 
-func (c *fakeLogClient) GetLeafAndInclusion(index, treeSize uint64) ([]byte, [][]byte, error) {
-	if treeSize > uint64(len(c.releases)) {
-		return nil, nil, fmt.Errorf("treeSize %d out of bounds for log with %d entries", treeSize, len(c.releases))
-	}
-	manifest := c.releases[index]
-	bs, err := json.Marshal(manifest)
-	if err != nil {
-		return nil, nil, err
-	}
-	// TODO(mhutchinson): inclusion proofs
-	return bs, nil, nil
-}
-
-func (c *fakeLogClient) GetBinary(release ftlog.FirmwareRelease) ([]byte, error) {
+func (c *fakeLogClient) GetBinary(_ context.Context, release ftlog.FirmwareRelease) ([]byte, error) {
 	return []byte(release.GitTagName.String()), nil
 }
 
-func (c *fakeLogClient) GetLatestCheckpoint() ([]byte, error) {
-	cp := log.Checkpoint{
-		Origin: origin,
-		Size:   uint64(len(c.releases)),
-	}
-	n := note.Note{
-		Text: string(cp.Marshal()),
-	}
-	signer, err := note.NewSigner(skey)
+func mustNewVerifier(t *testing.T, p string) note.Verifier {
+	t.Helper()
+	v, err := note.NewVerifier(p)
 	if err != nil {
-		return nil, err
+		t.Fatalf("NewVerifier: %v", err)
 	}
-	return note.Sign(&n, signer)
+	return v
 }

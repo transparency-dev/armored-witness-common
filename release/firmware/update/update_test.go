@@ -98,16 +98,16 @@ func TestUpdate(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			remote.EXPECT().GetLatestVersions().Return(tC.remoteOS, tC.remoteApp, nil)
+			remote.EXPECT().GetLatestVersions(gomock.Any()).Return(tC.remoteOS, tC.remoteApp, nil)
 			if tC.wantOSInstall {
 				osDownload := firmware.Bundle{}
-				remote.EXPECT().GetOS().Return(osDownload, nil)
+				remote.EXPECT().GetOS(gomock.Any()).Return(osDownload, nil)
 				verifier.EXPECT().Verify(gomock.Eq(osDownload)).Return(nil)
 				local.EXPECT().InstallOS(gomock.Eq(osDownload)).Return(nil)
 			}
 			if tC.wantAppInstall {
 				appDownload := firmware.Bundle{}
-				remote.EXPECT().GetApplet().Return(appDownload, nil)
+				remote.EXPECT().GetApplet(gomock.Any()).Return(appDownload, nil)
 				verifier.EXPECT().Verify(gomock.Eq(appDownload)).Return(nil)
 				local.EXPECT().InstallApplet(gomock.Eq(appDownload)).Return(nil)
 			}

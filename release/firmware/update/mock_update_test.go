@@ -4,6 +4,7 @@
 package update_test
 
 import (
+	context "context"
 	reflect "reflect"
 
 	semver "github.com/coreos/go-semver/semver"
@@ -102,24 +103,24 @@ func (m *MockRemote) EXPECT() *MockRemoteMockRecorder {
 }
 
 // GetApplet mocks base method.
-func (m *MockRemote) GetApplet() (firmware.Bundle, error) {
+func (m *MockRemote) GetApplet(arg0 context.Context) (firmware.Bundle, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetApplet")
+	ret := m.ctrl.Call(m, "GetApplet", arg0)
 	ret0, _ := ret[0].(firmware.Bundle)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetApplet indicates an expected call of GetApplet.
-func (mr *MockRemoteMockRecorder) GetApplet() *gomock.Call {
+func (mr *MockRemoteMockRecorder) GetApplet(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplet", reflect.TypeOf((*MockRemote)(nil).GetApplet))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplet", reflect.TypeOf((*MockRemote)(nil).GetApplet), arg0)
 }
 
 // GetLatestVersions mocks base method.
-func (m *MockRemote) GetLatestVersions() (semver.Version, semver.Version, error) {
+func (m *MockRemote) GetLatestVersions(arg0 context.Context) (semver.Version, semver.Version, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestVersions")
+	ret := m.ctrl.Call(m, "GetLatestVersions", arg0)
 	ret0, _ := ret[0].(semver.Version)
 	ret1, _ := ret[1].(semver.Version)
 	ret2, _ := ret[2].(error)
@@ -127,24 +128,24 @@ func (m *MockRemote) GetLatestVersions() (semver.Version, semver.Version, error)
 }
 
 // GetLatestVersions indicates an expected call of GetLatestVersions.
-func (mr *MockRemoteMockRecorder) GetLatestVersions() *gomock.Call {
+func (mr *MockRemoteMockRecorder) GetLatestVersions(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestVersions", reflect.TypeOf((*MockRemote)(nil).GetLatestVersions))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestVersions", reflect.TypeOf((*MockRemote)(nil).GetLatestVersions), arg0)
 }
 
 // GetOS mocks base method.
-func (m *MockRemote) GetOS() (firmware.Bundle, error) {
+func (m *MockRemote) GetOS(arg0 context.Context) (firmware.Bundle, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOS")
+	ret := m.ctrl.Call(m, "GetOS", arg0)
 	ret0, _ := ret[0].(firmware.Bundle)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetOS indicates an expected call of GetOS.
-func (mr *MockRemoteMockRecorder) GetOS() *gomock.Call {
+func (mr *MockRemoteMockRecorder) GetOS(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOS", reflect.TypeOf((*MockRemote)(nil).GetOS))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOS", reflect.TypeOf((*MockRemote)(nil).GetOS), arg0)
 }
 
 // MockFirmwareVerifier is a mock of FirmwareVerifier interface.

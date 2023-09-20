@@ -46,11 +46,11 @@ type Local interface {
 // query and fetch new versions of firmware.
 type Remote interface {
 	// GetLatestVersions returns the latest available versions of the OS and Applet.
-	GetLatestVersions() (os, applet semver.Version, err error)
+	GetLatestVersions(context.Context) (os, applet semver.Version, err error)
 	// GetOS fetches the operating system executable and associated metadata.
-	GetOS() (firmware.Bundle, error)
+	GetOS(context.Context) (firmware.Bundle, error)
 	// GetApplet fetches the applet executable and associated metadata.
-	GetApplet() (firmware.Bundle, error)
+	GetApplet(context.Context) (firmware.Bundle, error)
 }
 
 // A FirmwareVerifier checks that the given Bundle passes installation policy.
@@ -92,13 +92,13 @@ type Updater struct {
 // This function is designed to be called periodically by a single thread. It is not
 // thread safe.
 func (u Updater) Update(ctx context.Context) error {
-	osVer, appVer, err := u.remote.GetLatestVersions()
+	osVer, appVer, err := u.remote.GetLatestVersions(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get latest versions: %v", err)
 	}
 	if u.osVer.LessThan(osVer) {
 		glog.Infof("Upgrading OS from %q to %q", u.osVer, osVer)
-		bundle, err := u.remote.GetOS()
+		bundle, err := u.remote.GetOS(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch OS firmware: %v", err)
 		}
@@ -111,7 +111,7 @@ func (u Updater) Update(ctx context.Context) error {
 	}
 	if u.appVer.LessThan(appVer) {
 		glog.Infof("Upgrading applet from %q to %q", u.osVer, osVer)
-		bundle, err := u.remote.GetApplet()
+		bundle, err := u.remote.GetApplet(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch applet firmware: %v", err)
 		}
