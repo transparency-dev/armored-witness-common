@@ -12,4 +12,4 @@ require (
 	golang.org/x/mod v0.12.0
 )
 
-require github.com/transparency-dev/serverless-log v0.0.0-20230914155322-9b6f31f76f1f // indirect
+require github.com/transparency-dev/serverless-log v0.0.0-20230921164749-4a612de18c57
