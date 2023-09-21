@@ -11,6 +11,8 @@ github.com/transparency-dev/formats v0.0.0-20230920083814-0f75b1d4e813 h1:PHklae
 github.com/transparency-dev/formats v0.0.0-20230920083814-0f75b1d4e813/go.mod h1:J2NdDb6IhKIvF6MwCvKikz9/QStRylEtS2mv+En+jBg=
 github.com/transparency-dev/merkle v0.0.2 h1:Q9nBoQcZcgPamMkGn7ghV8XiTZ/kRxn1yCG81+twTK4=
 github.com/transparency-dev/merkle v0.0.2/go.mod h1:pqSy+OXefQ1EDUVmAJ8MUhHB9TXGuzVAT58PqBoHz1A=
+github.com/transparency-dev/serverless-log v0.0.0-20230914155322-9b6f31f76f1f h1:quFhOfslKXkqvTCN0s5o2G/i/DLpfKkHFL893MnLetU=
+github.com/transparency-dev/serverless-log v0.0.0-20230914155322-9b6f31f76f1f/go.mod h1:wePHXib4JC193IyIQImP3oNXYpUZQWzKcF6BJ8bC8GY=
 github.com/transparency-dev/serverless-log v0.0.0-20230920112020-1fb6362f2bbf h1:d10372zGanv1eXfHwq4Z628cKo79mRVELFiRtC5iJ2c=
 github.com/transparency-dev/serverless-log v0.0.0-20230920112020-1fb6362f2bbf/go.mod h1:wePHXib4JC193IyIQImP3oNXYpUZQWzKcF6BJ8bC8GY=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
