@@ -185,16 +185,22 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 			Manifest:       leaf,
 			Firmware:       nil, // This will be downloaded on demand
 		}
+
+		klog.Infof("Found: %+v", manifest)
 		switch manifest.Component {
 		case ftlog.ComponentOS:
-			if f.latestOS == nil || f.latestOS.manifest.GitTagName.LessThan(manifest.GitTagName) {
+			if f.latestOS == nil ||
+				f.latestOS.manifest.GitTagName.LessThan(manifest.GitTagName) ||
+				f.latestOS.manifest.GitTagName.Equal(manifest.GitTagName) {
 				f.latestOS = &firmwareRelease{
 					bundle:   bundle,
 					manifest: manifest,
 				}
 			}
 		case ftlog.ComponentApplet:
-			if f.latestApplet == nil || f.latestApplet.manifest.GitTagName.LessThan(manifest.GitTagName) {
+			if f.latestApplet == nil ||
+				f.latestApplet.manifest.GitTagName.LessThan(manifest.GitTagName) ||
+				f.latestApplet.manifest.GitTagName.Equal(manifest.GitTagName) {
 				f.latestApplet = &firmwareRelease{
 					bundle:   bundle,
 					manifest: manifest,
