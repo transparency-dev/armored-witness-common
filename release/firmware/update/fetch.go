@@ -22,13 +22,13 @@ import (
 	"sync"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/golang/glog"
 	"github.com/transparency-dev/armored-witness-common/release/firmware"
 	"github.com/transparency-dev/armored-witness-common/release/firmware/ftlog"
 	"github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
 	"golang.org/x/mod/sumdb/note"
+	"k8s.io/klog/v2"
 
 	"github.com/transparency-dev/serverless-log/client"
 )
@@ -207,7 +207,7 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 				}
 			}
 		default:
-			glog.Warningf("unknown component type in log: %q", manifest.Component)
+			klog.Warningf("unknown component type in log: %q", manifest.Component)
 		}
 	}
 	f.scanFrom = f.logState.LatestConsistent.Size
