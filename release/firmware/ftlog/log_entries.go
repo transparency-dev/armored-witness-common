@@ -23,6 +23,10 @@ const (
 	ComponentApplet = "TRUSTED_APPLET"
 	// Component name for the OS used in FirmwareRelease.Component.
 	ComponentOS = "TRUSTED_OS"
+	// Component name for the Bootloader used in FirmwareRelease.Component.
+	ComponentBoot = "BOOTLOADER"
+	// Component name for the Recovery image used in FirmwareRelease.Component.
+	ComponentRecovery = "RECOVERY"
 )
 
 // FirmwareRelease represents a firmware release in the log.
