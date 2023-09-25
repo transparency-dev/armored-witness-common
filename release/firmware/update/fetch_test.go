@@ -179,7 +179,7 @@ func mustNewVerifierSigner(t *testing.T) (note.Verifier, note.Signer) {
 	}
 	s, err := note.NewSigner(testSkey)
 	if err != nil {
-		t.Fatalf("NewwSignererifier: %v", err)
+		t.Fatalf("NewSigner: %v", err)
 	}
 	return v, s
 }
