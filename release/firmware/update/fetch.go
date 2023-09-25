@@ -217,7 +217,7 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 			klog.Warningf("unknown component type in log: %q", manifest.Component)
 		}
 	}
-	f.scanFrom = f.logState.LatestConsistent.Size
+	f.scanFrom = to.Size
 	return nil
 }
 
