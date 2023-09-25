@@ -41,69 +41,129 @@ func TestFetcher(t *testing.T) {
 	ctx := context.Background()
 	lv, ls := mustNewVerifierSigner(t)
 
-	// Set up an in-memory serverless log to test against.
-	ms := testonly.NewMemStorage()
-	initLog(ctx, t, ms)
-
-	addReleasesToLog(ctx, t, ms, testOrigin, lv, ls, []ftlog.FirmwareRelease{
+	for _, test := range []struct {
+		desc     string
+		releases [][]ftlog.FirmwareRelease
+		want     [][]ftlog.FirmwareRelease
+	}{
 		{
-			Component:  ftlog.ComponentOS,
-			GitTagName: *semver.New("1.0.1"),
+			desc: "Rolling updates",
+			releases: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+				},
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.2.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.3.1")},
+				},
+			},
+			want: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+				},
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.2.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.3.1")},
+				},
+			},
+		}, {
+			desc: "Finds latest within multiple revs",
+			releases: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.2")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("2.0.1")},
+				},
+			},
+			want: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.2")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("2.0.1")},
+				},
+			},
+		}, {
+			desc: "ignores later lower versions",
+			releases: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.1.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.2")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.0.1")},
+				},
+			},
+			want: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.1.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+				},
+			},
+		}, {
+			desc: "Use log precedence",
+			releases: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+banana")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+banana")},
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+apple")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+apple")},
+				},
+			},
+			want: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+apple")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+apple")},
+				},
+			},
 		},
-		{
-			Component:  ftlog.ComponentApplet,
-			GitTagName: *semver.New("1.1.1"),
-		},
-	})
+	} {
+		t.Run(test.desc, func(t *testing.T) {
+			// Set up an in-memory serverless log to test against.
+			ms := testonly.NewMemStorage()
+			initLog(ctx, t, ms)
 
-	f, err := NewFetcher(ctx, FetcherOpts{
-		BinaryFetcher:         getBinary,
-		LogFetcher:            ms.Fetcher(),
-		LogOrigin:             testOrigin,
-		LogVerifier:           lv,
-		PreviousCheckpointRaw: nil})
-	if err != nil {
-		t.Fatalf("NewLogFetcher: %v", err)
-	}
+			if lr, lw := len(test.releases), len(test.want); lr != lw {
+				t.Fatalf("Test invalid num releases %d != num want %d", lr, lw)
+			}
 
-	if err := f.Scan(ctx); err != nil {
-		t.Fatalf("Scan: %v", err)
-	}
+			for i := range test.releases {
 
-	os, applet, err := f.GetLatestVersions(ctx)
-	if err != nil {
-		t.Fatalf("GetLatestVersions(): %v", err)
-	}
-	if got, want := os, *semver.New("1.0.1"); got != want {
-		t.Errorf("got != want (%v, %v)", got, want)
-	}
-	if got, want := applet, *semver.New("1.1.1"); got != want {
-		t.Errorf("got != want (%v, %v)", got, want)
-	}
+				addReleasesToLog(ctx, t, ms, testOrigin, lv, ls, test.releases[i])
 
-	addReleasesToLog(ctx, t, ms, testOrigin, lv, ls, []ftlog.FirmwareRelease{
-		{
-			Component:  ftlog.ComponentOS,
-			GitTagName: *semver.New("1.2.1"),
-		},
-		{
-			Component:  ftlog.ComponentApplet,
-			GitTagName: *semver.New("1.3.1"),
-		},
-	})
+				f, err := NewFetcher(ctx, FetcherOpts{
+					BinaryFetcher:         getBinary,
+					LogFetcher:            ms.Fetcher(),
+					LogOrigin:             testOrigin,
+					LogVerifier:           lv,
+					PreviousCheckpointRaw: nil})
+				if err != nil {
+					t.Fatalf("NewLogFetcher: %v", err)
+				}
 
-	if err := f.Scan(ctx); err != nil {
-		t.Fatalf("Scan: %v", err)
-	}
-	os, applet, err = f.GetLatestVersions(ctx)
-	if err != nil {
-		t.Fatalf("GetLatestVersions(): %v", err)
-	}
-	if got, want := os, *semver.New("1.2.1"); got != want {
-		t.Errorf("got != want (%v, %v)", got, want)
-	}
-	if got, want := applet, *semver.New("1.3.1"); got != want {
-		t.Errorf("got != want (%v, %v)", got, want)
+				if err := f.Scan(ctx); err != nil {
+					t.Fatalf("Scan: %v", err)
+				}
+
+				os, applet, err := f.GetLatestVersions(ctx)
+				if err != nil {
+					t.Fatalf("GetLatestVersions(): %v", err)
+				}
+
+				for _, want := range test.want[i] {
+					var got semver.Version
+					switch want.Component {
+					case ftlog.ComponentApplet:
+						got = applet
+					case ftlog.ComponentOS:
+						got = os
+					}
+					if got.String() != want.GitTagName.String() {
+						t.Errorf("got %v, want %v", got, want)
+					}
+				}
+			}
+		})
 	}
 }
 
