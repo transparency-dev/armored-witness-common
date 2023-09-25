@@ -99,7 +99,6 @@ type Fetcher struct {
 	latestOS     *firmwareRelease
 	latestApplet *firmwareRelease
 	logState     client.LogStateTracker
-	proofBuilder *client.ProofBuilder
 	scanFrom     uint64
 }
 
@@ -162,18 +161,13 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 	if to.Size <= f.scanFrom {
 		return nil
 	}
-	// TODO(al): LogStateTracker should probably expose the builder it uses for checking consistency so others
-	// can reuse it.
-	if f.proofBuilder, err = client.NewProofBuilder(ctx, *to, f.logState.Hasher.HashChildren, f.logFetcher); err != nil {
-		return fmt.Errorf("failed to create proof builder: %w", err)
-	}
 
 	for i := f.scanFrom; i < to.Size; i++ {
 		leaf, err := client.GetLeaf(ctx, f.logFetcher, i)
 		if err != nil {
 			return fmt.Errorf("failed to get log leaf %d: %v", i, err)
 		}
-		incP, err := f.proofBuilder.InclusionProof(ctx, i)
+		incP, err := f.logState.ProofBuilder.InclusionProof(ctx, i)
 		if err != nil {
 			return fmt.Errorf("failed to get inclusion proof for leaf %d: %v", i, err)
 		}
