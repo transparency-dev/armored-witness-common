@@ -37,6 +37,34 @@ const (
 	testSkey   = "PRIVATE+KEY+ArmoredWitnessFirmwareLog+3e6f9306+AYJIjPyyT5wKmBQ8duU8Bwl2ZSslUmrMgwdTUChHKEag"
 )
 
+func TestBinPath(t *testing.T) {
+	for _, test := range []struct {
+		r    ftlog.FirmwareRelease
+		want string
+	}{
+		{
+			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
+			want: "os/1.0.1/trusted_os.elf",
+		}, {
+			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.9.1")},
+			want: "os/1.9.1/trusted_os.elf",
+		}, {
+			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentApplet, GitTagName: *semver.New("7.7.7")},
+			want: "applet/7.7.7/trusted_applet.elf",
+		}, {
+			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentBoot, GitTagName: *semver.New("0.0.0")},
+			want: "boot/0.0.0/armored-witness-boot.imx",
+		}, {
+			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("2.0.0")},
+			want: "recovery/2.0.0/armory-ums.imx",
+		},
+	} {
+		if got, _ := BinaryPath(test.r); got != test.want {
+			t.Errorf("Got %q want %q", got, test.want)
+		}
+	}
+}
+
 func TestFetcher(t *testing.T) {
 	ctx := context.Background()
 	lv, ls := mustNewVerifierSigner(t)
