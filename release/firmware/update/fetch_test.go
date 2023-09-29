@@ -44,13 +44,13 @@ func TestBinPath(t *testing.T) {
 	}{
 		{
 			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
-			want: "os/1.0.1/trusted_os.elf",
+			want: "trusted-os/1.0.1/trusted_os.elf",
 		}, {
 			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.9.1")},
-			want: "os/1.9.1/trusted_os.elf",
+			want: "trusted-os/1.9.1/trusted_os.elf",
 		}, {
 			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentApplet, GitTagName: *semver.New("7.7.7")},
-			want: "applet/7.7.7/trusted_applet.elf",
+			want: "trusted-applet/7.7.7/trusted_applet.elf",
 		}, {
 			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentBoot, GitTagName: *semver.New("0.0.0")},
 			want: "boot/0.0.0/armored-witness-boot.imx",

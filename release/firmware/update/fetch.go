@@ -54,19 +54,19 @@ type FetcherOpts struct {
 	PreviousCheckpointRaw []byte
 }
 
-// BinaryPath returns the relative path for the binary references by the manifest.
+// BinaryPath returns the relative path within a bucket for the binary referenced by the manifest.
 func BinaryPath(fr ftlog.FirmwareRelease) (string, error) {
 	dir := ""
 	file := ""
 	switch fr.Component {
 	case ftlog.ComponentApplet:
-		dir = "applet"
+		dir = "trusted-applet"
 		file = "trusted_applet.elf"
 	case ftlog.ComponentBoot:
 		dir = "boot"
 		file = "armored-witness-boot.imx"
 	case ftlog.ComponentOS:
-		dir = "os"
+		dir = "trusted-os"
 		file = "trusted_os.elf"
 	case ftlog.ComponentRecovery:
 		dir = "recovery"
