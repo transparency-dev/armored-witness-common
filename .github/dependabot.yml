@@ -13,3 +13,6 @@ updates:
         - "*"
   schedule:
     interval: daily
+  commit-message:
+    prefix: ":seedling:"
+    include: "scope"
