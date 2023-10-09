@@ -7,5 +7,9 @@ version: 2
 updates:
 - package-ecosystem: gomod
   directory: /
+  groups:
+    all-go-deps:
+      patterns:
+        - "*"
   schedule:
     interval: daily
