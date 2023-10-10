@@ -32,9 +32,19 @@ import (
 )
 
 const (
-	testOrigin = "testlog"
-	testVkey   = "ArmoredWitnessFirmwareLog+3e6f9306+ARjETaImkiqXZCH5pk1XtfX0tHgFhi1qGIxQqT6231S1"
-	testSkey   = "PRIVATE+KEY+ArmoredWitnessFirmwareLog+3e6f9306+AYJIjPyyT5wKmBQ8duU8Bwl2ZSslUmrMgwdTUChHKEag"
+	testOrigin       = "testlog"
+	testVkey         = "ArmoredWitnessFirmwareLog+3e6f9306+ARjETaImkiqXZCH5pk1XtfX0tHgFhi1qGIxQqT6231S1"
+	testSkey         = "PRIVATE+KEY+ArmoredWitnessFirmwareLog+3e6f9306+AYJIjPyyT5wKmBQ8duU8Bwl2ZSslUmrMgwdTUChHKEag"
+	testAppletVkey   = "test-applet+290af40f+Af0AiAktGwImYbgFA9UrczRbYBaJbdZzn5A2ToTOkqxV"
+	testAppletSkey   = "PRIVATE+KEY+test-applet+290af40f+ATJe9X6imT+eg+NFDPcjHGl9bqEsN+NIflq4lRydqPKW"
+	testBootVkey     = "test-boot+44991abe+AUjHQ4wNywnc2WLBdBb+tIG0PPgDRyUGEsW2MwaHIPpF"
+	testBootSkey     = "PRIVATE+KEY+test-boot+44991abe+AT51PcaJZhqcONnHuQo3Qa6cN7t+Al8Sl7+1kZIfbGXw"
+	testOSVkey1      = "test-os-1+9395589a+AYlQ0SeQx8tVtQZkIJxU7OKmv8rspXRiRc4hVO/bq1xV"
+	testOSSkey1      = "PRIVATE+KEY+test-os-1+9395589a+AXPnLROuLHRm7Qlj8HNU9tVfX6dinmdaVVeGVFPvQg0k"
+	testOSVkey2      = "test-os-2+102291d1+AV91Bykl/mok7XNiC8XCDn+6bScvzttbqo2ru0Xdocj5"
+	testOSSkey2      = "PRIVATE+KEY+test-os-2+102291d1+AdvxU28+7keAQNjlXuf+M1FjUXLKi+2n9f8MrKWFJgiR"
+	testRecoveryVkey = "test-recovery+e1d7acb6+AS+hiEKKtij7apEWQQicV76hBPAlYIVnxmuoeRonKFQZ"
+	testRecoverySkey = "PRIVATE+KEY+test-recovery+e1d7acb6+AYebvQ5b1GxgnuTGc+p7CgKdEx2WUPk4ieAgObFq4wqW"
 )
 
 func TestBinPath(t *testing.T) {
@@ -67,7 +77,18 @@ func TestBinPath(t *testing.T) {
 
 func TestFetcher(t *testing.T) {
 	ctx := context.Background()
-	lv, ls := mustNewVerifierSigner(t)
+	lv, ls := mustNewVerifierSigner(t, testVkey, testSkey)
+	av, as := mustNewVerifierSigner(t, testAppletVkey, testAppletSkey)
+	bv, bs := mustNewVerifierSigner(t, testBootVkey, testBootSkey)
+	ov1, os1 := mustNewVerifierSigner(t, testOSVkey1, testOSSkey1)
+	ov2, os2 := mustNewVerifierSigner(t, testOSVkey2, testOSSkey2)
+	rv, rs := mustNewVerifierSigner(t, testRecoveryVkey, testRecoverySkey)
+	relSigners := map[string][]note.Signer{
+		ftlog.ComponentApplet:   {as},
+		ftlog.ComponentBoot:     {bs},
+		ftlog.ComponentOS:       {os1, os2},
+		ftlog.ComponentRecovery: {rs},
+	}
 
 	for _, test := range []struct {
 		desc     string
@@ -157,13 +178,17 @@ func TestFetcher(t *testing.T) {
 
 			for i := range test.releases {
 
-				addReleasesToLog(ctx, t, ms, testOrigin, lv, ls, test.releases[i])
+				addReleasesToLog(ctx, t, ms, testOrigin, lv, ls, relSigners, test.releases[i])
 
 				f, err := NewFetcher(ctx, FetcherOpts{
 					BinaryFetcher:         getBinary,
 					LogFetcher:            ms.Fetcher(),
 					LogOrigin:             testOrigin,
 					LogVerifier:           lv,
+					AppletVerifier:        av,
+					BootVerifier:          bv,
+					OsVerifiers:           [2]note.Verifier{ov1, ov2},
+					RecoveryVerifier:      rv,
 					PreviousCheckpointRaw: nil})
 				if err != nil {
 					t.Fatalf("NewLogFetcher: %v", err)
@@ -199,13 +224,13 @@ func getBinary(_ context.Context, release ftlog.FirmwareRelease) ([]byte, error)
 	return []byte(release.GitTagName.String()), nil
 }
 
-func mustNewVerifierSigner(t *testing.T) (note.Verifier, note.Signer) {
+func mustNewVerifierSigner(t *testing.T, vk, sk string) (note.Verifier, note.Signer) {
 	t.Helper()
-	v, err := note.NewVerifier(testVkey)
+	v, err := note.NewVerifier(vk)
 	if err != nil {
 		t.Fatalf("NewVerifier: %v", err)
 	}
-	s, err := note.NewSigner(testSkey)
+	s, err := note.NewSigner(sk)
 	if err != nil {
 		t.Fatalf("NewSigner: %v", err)
 	}
@@ -214,7 +239,7 @@ func mustNewVerifierSigner(t *testing.T) (note.Verifier, note.Signer) {
 
 // addReleasesToLog sequences and integrates the provided releases into the log based on
 // the given storage.
-func addReleasesToLog(ctx context.Context, t *testing.T, ms *testonly.MemStorage, origin string, lv note.Verifier, ls note.Signer, releases []ftlog.FirmwareRelease) {
+func addReleasesToLog(ctx context.Context, t *testing.T, ms *testonly.MemStorage, origin string, lv note.Verifier, ls note.Signer, rs map[string][]note.Signer, releases []ftlog.FirmwareRelease) {
 	t.Helper()
 	cpRaw, err := ms.Fetcher()(ctx, layout.CheckpointPath)
 	if err != nil {
@@ -225,9 +250,13 @@ func addReleasesToLog(ctx context.Context, t *testing.T, ms *testonly.MemStorage
 		t.Fatalf("ParseCheckpoint: %v", err)
 	}
 	for _, r := range releases {
-		l, err := json.MarshalIndent(r, "", " ")
+		j, err := json.MarshalIndent(r, "", " ")
 		if err != nil {
 			t.Fatalf("Marshal: %v", err)
+		}
+		l, err := note.Sign(&note.Note{Text: string(j) + "\n"}, rs[r.Component]...)
+		if err != nil {
+			t.Fatalf("Sign: %v", err)
 		}
 		lh := rfc6962.DefaultHasher.HashLeaf(l)
 		if _, err := ms.Sequence(ctx, lh, l); err != nil {
