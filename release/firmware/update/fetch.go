@@ -53,7 +53,7 @@ type FetcherOpts struct {
 	// BootVerifier is used to verify signatures on bootloader manifests.
 	BootVerifier note.Verifier
 	// OSVerifiers are used to verify signatures on OS manifests.
-	OsVerifiers [2]note.Verifier
+	OSVerifiers [2]note.Verifier
 	// RecoveryVerifier is used to verify signatures on recovery manifests.
 	RecoveryVerifier note.Verifier
 
@@ -113,7 +113,7 @@ func NewFetcher(ctx context.Context, opts FetcherOpts) (*Fetcher, error) {
 	f.manifestVerifiers = map[string][]note.Verifier{
 		ftlog.ComponentApplet:   {opts.AppletVerifier},
 		ftlog.ComponentBoot:     {opts.BootVerifier},
-		ftlog.ComponentOS:       opts.OsVerifiers[:],
+		ftlog.ComponentOS:       opts.OSVerifiers[:],
 		ftlog.ComponentRecovery: {opts.RecoveryVerifier},
 	}
 	// IFF we were provided the previously used checkpoint, we'll override the
@@ -273,7 +273,7 @@ func parseLeaf(leaf []byte, verifiers map[string][]note.Verifier) (ftlog.Firmwar
 
 	for k, v := range verifiers {
 		if n, err = note.Open(leaf, note.VerifierList(v...)); err != nil {
-			klog.Infof(err.Error())
+			klog.Info(err)
 			continue
 		}
 		// We've opened the note successfully, but check that we got as many signatures as

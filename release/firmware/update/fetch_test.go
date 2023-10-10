@@ -187,7 +187,7 @@ func TestFetcher(t *testing.T) {
 					LogVerifier:           lv,
 					AppletVerifier:        av,
 					BootVerifier:          bv,
-					OsVerifiers:           [2]note.Verifier{ov1, ov2},
+					OSVerifiers:           [2]note.Verifier{ov1, ov2},
 					RecoveryVerifier:      rv,
 					PreviousCheckpointRaw: nil})
 				if err != nil {
