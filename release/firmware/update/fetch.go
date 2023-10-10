@@ -137,11 +137,13 @@ type Fetcher struct {
 
 	manifestVerifiers map[string][]note.Verifier
 
-	mu           sync.Mutex
-	latestOS     *firmwareRelease
-	latestApplet *firmwareRelease
-	logState     client.LogStateTracker
-	scanFrom     uint64
+	mu             sync.Mutex
+	latestOS       *firmwareRelease
+	latestApplet   *firmwareRelease
+	latestBoot     *firmwareRelease
+	latestRecovery *firmwareRelease
+	logState       client.LogStateTracker
+	scanFrom       uint64
 }
 
 func (f *Fetcher) GetLatestVersions(_ context.Context) (os semver.Version, applet semver.Version, err error) {
@@ -183,6 +185,40 @@ func (f *Fetcher) GetApplet(ctx context.Context) (firmware.Bundle, error) {
 		f.latestApplet.bundle.Firmware = binary
 	}
 	return *f.latestApplet.bundle, nil
+}
+
+func (f *Fetcher) GetBoot(ctx context.Context) (firmware.Bundle, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.latestBoot == nil {
+		return firmware.Bundle{}, errors.New("no latest boot available")
+	}
+	if f.latestBoot.bundle.Firmware == nil {
+		binary, err := f.binFetcher(ctx, f.latestBoot.manifest)
+		if err != nil {
+			return firmware.Bundle{}, fmt.Errorf("BinaryFetcher(): %v", err)
+		}
+		f.latestBoot.bundle.Firmware = binary
+	}
+	return *f.latestBoot.bundle, nil
+}
+
+func (f *Fetcher) GetRecovery(ctx context.Context) (firmware.Bundle, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.latestRecovery == nil {
+		return firmware.Bundle{}, errors.New("no latest recovery available")
+	}
+	if f.latestRecovery.bundle.Firmware == nil {
+		binary, err := f.binFetcher(ctx, f.latestRecovery.manifest)
+		if err != nil {
+			return firmware.Bundle{}, fmt.Errorf("BinaryFetcher(): %v", err)
+		}
+		f.latestRecovery.bundle.Firmware = binary
+	}
+	return *f.latestRecovery.bundle, nil
 }
 
 // Scan gets the latest checkpoint from the log and updates the fetcher's state
@@ -252,6 +288,26 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 				f.latestApplet.manifest.GitTagName.LessThan(manifest.GitTagName) ||
 				f.latestApplet.manifest.GitTagName.Equal(manifest.GitTagName) {
 				f.latestApplet = &firmwareRelease{
+					bundle:   bundle,
+					manifest: manifest,
+				}
+			}
+		case ftlog.ComponentBoot:
+			// See comment above about the Equal case.
+			if f.latestBoot == nil ||
+				f.latestBoot.manifest.GitTagName.LessThan(manifest.GitTagName) ||
+				f.latestBoot.manifest.GitTagName.Equal(manifest.GitTagName) {
+				f.latestBoot = &firmwareRelease{
+					bundle:   bundle,
+					manifest: manifest,
+				}
+			}
+		case ftlog.ComponentRecovery:
+			// See comment above about the Equal case.
+			if f.latestRecovery == nil ||
+				f.latestRecovery.manifest.GitTagName.LessThan(manifest.GitTagName) ||
+				f.latestRecovery.manifest.GitTagName.Equal(manifest.GitTagName) {
+				f.latestRecovery = &firmwareRelease{
 					bundle:   bundle,
 					manifest: manifest,
 				}
