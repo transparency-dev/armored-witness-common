@@ -47,6 +47,16 @@ type FetcherOpts struct {
 	LogOrigin string
 	// LogVerifier is used to verify checkpoint signatures from the target FT log.
 	LogVerifier note.Verifier
+
+	// AppletVerifier is used to verify signatures on applet manifests.
+	AppletVerifier note.Verifier
+	// BootVerifier is used to verify signatures on bootloader manifests.
+	BootVerifier note.Verifier
+	// OSVerifiers are used to verify signatures on OS manifests.
+	OSVerifiers [2]note.Verifier
+	// RecoveryVerifier is used to verify signatures on recovery manifests.
+	RecoveryVerifier note.Verifier
+
 	// PreviousCheckpointRaw is optional and should contain the raw bytes of the checkpoint
 	// used during the last firmware update.
 	// Leaving this unset will cause the Fetcher to consider all entries in the log, rather than
@@ -71,6 +81,8 @@ func BinaryPath(fr ftlog.FirmwareRelease) (string, error) {
 	case ftlog.ComponentRecovery:
 		dir = "recovery"
 		file = "armory-ums.imx"
+	default:
+		return "", fmt.Errorf("unrecognised component %q", fr.Component)
 	}
 	return url.JoinPath(dir, fr.GitTagName.String(), file)
 }
@@ -98,6 +110,12 @@ func NewFetcher(ctx context.Context, opts FetcherOpts) (*Fetcher, error) {
 		binFetcher:  opts.BinaryFetcher,
 		scanFrom:    0,
 	}
+	f.manifestVerifiers = map[string][]note.Verifier{
+		ftlog.ComponentApplet:   {opts.AppletVerifier},
+		ftlog.ComponentBoot:     {opts.BootVerifier},
+		ftlog.ComponentOS:       opts.OSVerifiers[:],
+		ftlog.ComponentRecovery: {opts.RecoveryVerifier},
+	}
 	// IFF we were provided the previously used checkpoint, we'll override the
 	// log index at which we'll start scanning.
 	if opts.PreviousCheckpointRaw != nil {
@@ -116,6 +134,8 @@ type Fetcher struct {
 	logVerifier note.Verifier
 
 	binFetcher BinaryFetcher
+
+	manifestVerifiers map[string][]note.Verifier
 
 	mu           sync.Mutex
 	latestOS     *firmwareRelease
@@ -196,9 +216,10 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 		if err := proof.VerifyInclusion(f.logState.Hasher, i, to.Size, f.logState.Hasher.HashLeaf(leaf), incP, to.Hash); err != nil {
 			return fmt.Errorf("invalid inclusion proof for leaf %d: %v", i, err)
 		}
-		manifest, err := parseLeaf(leaf)
+		manifest, err := parseLeaf(leaf, f.manifestVerifiers)
 		if err != nil {
-			return fmt.Errorf("failed to parse leaf at %d: %v", i, err)
+			klog.Errorf("failed to parse leaf at %d: %v", i, err)
+			continue
 		}
 		bundle := &firmware.Bundle{
 			Checkpoint:     cpRaw,
@@ -243,12 +264,39 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 	return nil
 }
 
-func parseLeaf(leaf []byte) (ftlog.FirmwareRelease, error) {
-	r := ftlog.FirmwareRelease{}
-	if err := json.Unmarshal(leaf, &r); err != nil {
-		return r, fmt.Errorf("Unmarshal: %v", err)
+func parseLeaf(leaf []byte, verifiers map[string][]note.Verifier) (ftlog.FirmwareRelease, error) {
+	var n *note.Note
+	var err error
+	var expectedComponent string
+
+	klog.Infof(string(leaf))
+
+	for k, v := range verifiers {
+		if n, err = note.Open(leaf, note.VerifierList(v...)); err != nil {
+			klog.Info(err)
+			continue
+		}
+		// We've opened the note successfully, but check that we got as many signatures as
+		// expected - this is currently only really a concern for the OS which is expected to
+		// be signed by two parties.
+		if lv, ls := len(v), len(n.Sigs); lv != ls {
+			return ftlog.FirmwareRelease{}, fmt.Errorf("expected %d sigs, got %d", lv, ls)
+		}
+		expectedComponent = k
+
+		r := ftlog.FirmwareRelease{}
+		if err := json.Unmarshal([]byte(n.Text), &r); err != nil {
+			return r, fmt.Errorf("failed to unmarshal manifest body: %v", err)
+		}
+		if got := r.Component; got != expectedComponent {
+			return ftlog.FirmwareRelease{}, fmt.Errorf("unexpected component type %q verified by %q signature", got, expectedComponent)
+		}
+
+		return r, nil
+
 	}
-	return r, nil
+
+	return ftlog.FirmwareRelease{}, errors.New("no recognised signatures")
 }
 
 type firmwareRelease struct {
