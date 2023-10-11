@@ -305,11 +305,11 @@ func parseLeaf(leaf []byte, verifiers map[string][]note.Verifier) (ftlog.Firmwar
 	var err error
 	var expectedComponent string
 
-	klog.Infof(string(leaf))
+	klog.V(2).Infof(string(leaf))
 
 	for k, v := range verifiers {
 		if n, err = note.Open(leaf, note.VerifierList(v...)); err != nil {
-			klog.Info(err)
+			klog.V(1).Info(err)
 			continue
 		}
 		// We've opened the note successfully, but check that we got as many signatures as
