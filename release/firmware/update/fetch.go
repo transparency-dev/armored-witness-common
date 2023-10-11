@@ -137,11 +137,13 @@ type Fetcher struct {
 
 	manifestVerifiers map[string][]note.Verifier
 
-	mu           sync.Mutex
-	latestOS     *firmwareRelease
-	latestApplet *firmwareRelease
-	logState     client.LogStateTracker
-	scanFrom     uint64
+	mu             sync.Mutex
+	latestOS       *firmwareRelease
+	latestApplet   *firmwareRelease
+	latestBoot     *firmwareRelease
+	latestRecovery *firmwareRelease
+	logState       client.LogStateTracker
+	scanFrom       uint64
 }
 
 func (f *Fetcher) GetLatestVersions(_ context.Context) (os semver.Version, applet semver.Version, err error) {
@@ -183,6 +185,40 @@ func (f *Fetcher) GetApplet(ctx context.Context) (firmware.Bundle, error) {
 		f.latestApplet.bundle.Firmware = binary
 	}
 	return *f.latestApplet.bundle, nil
+}
+
+func (f *Fetcher) GetBoot(ctx context.Context) (firmware.Bundle, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.latestBoot == nil {
+		return firmware.Bundle{}, errors.New("no latest boot available")
+	}
+	if f.latestBoot.bundle.Firmware == nil {
+		binary, err := f.binFetcher(ctx, f.latestBoot.manifest)
+		if err != nil {
+			return firmware.Bundle{}, fmt.Errorf("BinaryFetcher(): %v", err)
+		}
+		f.latestBoot.bundle.Firmware = binary
+	}
+	return *f.latestBoot.bundle, nil
+}
+
+func (f *Fetcher) GetRecovery(ctx context.Context) (firmware.Bundle, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.latestRecovery == nil {
+		return firmware.Bundle{}, errors.New("no latest recovery available")
+	}
+	if f.latestRecovery.bundle.Firmware == nil {
+		binary, err := f.binFetcher(ctx, f.latestRecovery.manifest)
+		if err != nil {
+			return firmware.Bundle{}, fmt.Errorf("BinaryFetcher(): %v", err)
+		}
+		f.latestRecovery.bundle.Firmware = binary
+	}
+	return *f.latestRecovery.bundle, nil
 }
 
 // Scan gets the latest checkpoint from the log and updates the fetcher's state
@@ -231,37 +267,37 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 
 		switch manifest.Component {
 		case ftlog.ComponentOS:
-			// According to the SemVer2.0 spec, equal revisions have no precedence defined.
-			// In general this won't be an issue; production releases will always be tagged appropriately,
-			// and there should never be two different releases with the same semver for a given component,
-			// however, during development, this may not hold.
-			// To tighten the definition of precedence, we'll use the fact that logs define ordering
-			// and say that "later" entries take precedence over "earlier" entries with the same version
-			// numbering.
-			if f.latestOS == nil ||
-				f.latestOS.manifest.GitTagName.LessThan(manifest.GitTagName) ||
-				f.latestOS.manifest.GitTagName.Equal(manifest.GitTagName) {
-				f.latestOS = &firmwareRelease{
-					bundle:   bundle,
-					manifest: manifest,
-				}
-			}
+			f.latestOS = highestRelease(f.latestOS, &firmwareRelease{bundle: bundle, manifest: manifest})
 		case ftlog.ComponentApplet:
-			// See comment above about the Equal case.
-			if f.latestApplet == nil ||
-				f.latestApplet.manifest.GitTagName.LessThan(manifest.GitTagName) ||
-				f.latestApplet.manifest.GitTagName.Equal(manifest.GitTagName) {
-				f.latestApplet = &firmwareRelease{
-					bundle:   bundle,
-					manifest: manifest,
-				}
-			}
+			f.latestApplet = highestRelease(f.latestApplet, &firmwareRelease{bundle: bundle, manifest: manifest})
+		case ftlog.ComponentBoot:
+			f.latestBoot = highestRelease(f.latestBoot, &firmwareRelease{bundle: bundle, manifest: manifest})
+		case ftlog.ComponentRecovery:
+			f.latestRecovery = highestRelease(f.latestRecovery, &firmwareRelease{bundle: bundle, manifest: manifest})
 		default:
 			klog.Warningf("unknown component type in log: %q", manifest.Component)
 		}
 	}
 	f.scanFrom = to.Size
 	return nil
+}
+
+// highestRelease returns the "higher" of the two releases passed in according to SemVer rules.
+//
+// According to the SemVer2.0 spec, equal revisions have no precedence defined.
+// In general this won't be an issue; production releases will always be tagged appropriately,
+// and there should never be two different releases with the same semver for a given component,
+// however, during development, this may not hold.
+// To tighten the definition of precedence, we'll use the fact that logs define ordering
+// and say that "later" entries take precedence over "earlier" entries with the same version
+// numbering.
+func highestRelease(current *firmwareRelease, candidate *firmwareRelease) *firmwareRelease {
+	if current == nil ||
+		current.manifest.GitTagName.LessThan(candidate.manifest.GitTagName) ||
+		current.manifest.GitTagName.Equal(candidate.manifest.GitTagName) {
+		return candidate
+	}
+	return current
 }
 
 func parseLeaf(leaf []byte, verifiers map[string][]note.Verifier) (ftlog.FirmwareRelease, error) {

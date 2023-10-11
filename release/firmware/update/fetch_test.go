@@ -101,10 +101,14 @@ func TestFetcher(t *testing.T) {
 				{
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+					{Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 				},
 				{
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.2.1")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.3.1")},
+					{Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 				},
 			},
 			want: [][]ftlog.FirmwareRelease{
@@ -115,6 +119,8 @@ func TestFetcher(t *testing.T) {
 				{
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.2.1")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.3.1")},
+					{Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 				},
 			},
 		}, {
@@ -123,14 +129,20 @@ func TestFetcher(t *testing.T) {
 				{
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+					{Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.2")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("2.0.1")},
+					{Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.7.1")},
+					{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.8.1")},
 				},
 			},
 			want: [][]ftlog.FirmwareRelease{
 				{
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.2")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("2.0.1")},
+					{Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.7.1")},
+					{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.8.1")},
 				},
 			},
 		}, {
@@ -208,9 +220,26 @@ func TestFetcher(t *testing.T) {
 					switch want.Component {
 					case ftlog.ComponentApplet:
 						got = applet
+						if _, err = f.GetApplet(ctx); err != nil {
+							t.Fatalf("GetApplet: %v", err)
+						}
+					case ftlog.ComponentBoot:
+						if _, err = f.GetBoot(ctx); err != nil {
+							t.Fatalf("GetBoot: %v", err)
+						}
+						got = f.latestBoot.manifest.GitTagName
 					case ftlog.ComponentOS:
 						got = os
+						if _, err = f.GetOS(ctx); err != nil {
+							t.Fatalf("GetOS: %v", err)
+						}
+					case ftlog.ComponentRecovery:
+						if _, err = f.GetRecovery(ctx); err != nil {
+							t.Fatalf("GetRecovery: %v", err)
+						}
+						got = f.latestRecovery.manifest.GitTagName
 					}
+
 					if got.String() != want.GitTagName.String() {
 						t.Errorf("got %v, want %v", got, want)
 					}
