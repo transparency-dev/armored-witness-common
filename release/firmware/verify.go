@@ -27,45 +27,43 @@ import (
 	"golang.org/x/mod/sumdb/note"
 )
 
-const (
-	// TODO(mhutchinson): these constants should be defined outside of this file.
-	origin = "transparency.dev/armored-witness/firmware_transparency/prod/0"
-
-	// TODO(mhutchinson): these are obviously fake placeholders. Replace with real vkey when available.
-	logVkey = "ArmoredWitnessFirmwareLog+3e6f9306+ARjETaImkiqXZCH5pk1XtfX0tHgFhi1qGIxQqT6231S1"
-)
-
-func NewBundleVerifier() BundleVerifier {
-	v, err := note.NewVerifier(logVkey)
-	if err != nil {
-		panic(err)
-	}
-	return BundleVerifier{
-		logVerifer: v,
-	}
-}
-
 type BundleVerifier struct {
-	logVerifer note.Verifier
+	// LogOrigin identifies the expected FT log for manifests to be submitted to.
+	LogOrigin string
+	// LogVerifier can verify signatures from the expected FT log.
+	LogVerifer note.Verifier
+	// ManifestVerifiers is a list of verifiers to use when verifying signatures over manifests.
+	// ALL verifiers are expected to succeed - i.e. there must be a matching signature present
+	// on the manifest for every verifier in this list.
+	ManifestVerifiers []note.Verifier
 }
 
 // Verify checks the firmware bundle and returns an error if invalid, or nil
 // if the firmware is safe to install.
 func (v *BundleVerifier) Verify(b Bundle) error {
 	// TODO(mhutchinson): check some witness signatures in addition to the log signature.
-	cp, _, _, err := log.ParseCheckpoint(b.Checkpoint, origin, v.logVerifer)
+	cp, _, _, err := log.ParseCheckpoint(b.Checkpoint, v.LogOrigin, v.LogVerifer)
 	if err != nil {
 		return fmt.Errorf("ParseCheckpoint(): %v", err)
 	}
-	manifestHash := rfc6962.DefaultHasher.HashLeaf(b.Manifest)
+
+	n, err := note.Open(b.Manifest, note.VerifierList(v.ManifestVerifiers...))
+	if err != nil {
+		return fmt.Errorf("note.Open(): %v", err)
+	}
+	if got, want := len(n.Sigs), len(v.ManifestVerifiers); got != want {
+		return fmt.Errorf("got %d verified signatures, want %d", got, want)
+	}
 	manifest := ftlog.FirmwareRelease{}
-	if err := json.Unmarshal(b.Manifest, &manifest); err != nil {
+	if err := json.Unmarshal([]byte(n.Text), &manifest); err != nil {
 		return fmt.Errorf("Unmarshal(): %v", err)
 	}
 
-	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, b.Index, cp.Size, manifestHash, b.InclusionProof, cp.Hash); err != nil {
+	leafHash := rfc6962.DefaultHasher.HashLeaf(b.Manifest)
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, b.Index, cp.Size, leafHash, b.InclusionProof, cp.Hash); err != nil {
 		return fmt.Errorf("inclusion proof verification failed: %v", err)
 	}
+
 	h := sha256.Sum256(b.Firmware)
 	if manifestHash, calculatedHash := manifest.FirmwareDigestSha256, h[:]; !bytes.Equal(manifestHash, calculatedHash) {
 		return fmt.Errorf("firmware hash mismatch: manifest says %x but firmware bytes hash to %x", manifestHash, calculatedHash)
