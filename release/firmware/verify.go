@@ -40,33 +40,34 @@ type BundleVerifier struct {
 
 // Verify checks the firmware bundle and returns an error if invalid, or nil
 // if the firmware is safe to install.
-func (v *BundleVerifier) Verify(b Bundle) error {
+// The parsed manifest used during verification is returned.
+func (v *BundleVerifier) Verify(b Bundle) (*ftlog.FirmwareRelease, error) {
 	// TODO(mhutchinson): check some witness signatures in addition to the log signature.
 	cp, _, _, err := log.ParseCheckpoint(b.Checkpoint, v.LogOrigin, v.LogVerifer)
 	if err != nil {
-		return fmt.Errorf("ParseCheckpoint(): %v", err)
+		return nil, fmt.Errorf("ParseCheckpoint(): %v", err)
 	}
 
 	n, err := note.Open(b.Manifest, note.VerifierList(v.ManifestVerifiers...))
 	if err != nil {
-		return fmt.Errorf("note.Open(): %v", err)
+		return nil, fmt.Errorf("note.Open(): %v", err)
 	}
 	if got, want := len(n.Sigs), len(v.ManifestVerifiers); got != want {
-		return fmt.Errorf("got %d verified signatures, want %d", got, want)
+		return nil, fmt.Errorf("got %d verified signatures, want %d", got, want)
 	}
 	manifest := ftlog.FirmwareRelease{}
 	if err := json.Unmarshal([]byte(n.Text), &manifest); err != nil {
-		return fmt.Errorf("Unmarshal(): %v", err)
+		return nil, fmt.Errorf("Unmarshal(): %v", err)
 	}
 
 	leafHash := rfc6962.DefaultHasher.HashLeaf(b.Manifest)
 	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, b.Index, cp.Size, leafHash, b.InclusionProof, cp.Hash); err != nil {
-		return fmt.Errorf("inclusion proof verification failed: %v", err)
+		return nil, fmt.Errorf("inclusion proof verification failed: %v", err)
 	}
 
 	h := sha256.Sum256(b.Firmware)
 	if manifestHash, calculatedHash := manifest.FirmwareDigestSha256, h[:]; !bytes.Equal(manifestHash, calculatedHash) {
-		return fmt.Errorf("firmware hash mismatch: manifest says %x but firmware bytes hash to %x", manifestHash, calculatedHash)
+		return nil, fmt.Errorf("firmware hash mismatch: manifest says %x but firmware bytes hash to %x", manifestHash, calculatedHash)
 	}
-	return nil
+	return &manifest, nil
 }
