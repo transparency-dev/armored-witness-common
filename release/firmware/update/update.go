@@ -96,6 +96,9 @@ func (u Updater) Update(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get latest versions: %v", err)
 	}
+
+	klog.Infof("Installed (os: %v applet: %v)", u.osVer, u.appVer)
+	klog.Infof("Updates (os: %v applet: %v)", osVer, appVer)
 	if u.osVer.LessThan(osVer) {
 		klog.Infof("Upgrading OS from %q to %q", u.osVer, osVer)
 		bundle, err := u.remote.GetOS(ctx)
@@ -110,7 +113,7 @@ func (u Updater) Update(ctx context.Context) error {
 		}
 	}
 	if u.appVer.LessThan(appVer) {
-		klog.Infof("Upgrading applet from %q to %q", u.osVer, osVer)
+		klog.Infof("Upgrading applet from %q to %q", u.appVer, appVer)
 		bundle, err := u.remote.GetApplet(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch applet firmware: %v", err)
