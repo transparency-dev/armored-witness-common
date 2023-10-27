@@ -110,11 +110,18 @@ func NewFetcher(ctx context.Context, opts FetcherOpts) (*Fetcher, error) {
 		binFetcher:  opts.BinaryFetcher,
 		scanFrom:    0,
 	}
-	f.manifestVerifiers = map[string][]note.Verifier{
-		ftlog.ComponentApplet:   {opts.AppletVerifier},
-		ftlog.ComponentBoot:     {opts.BootVerifier},
-		ftlog.ComponentOS:       opts.OSVerifiers[:],
-		ftlog.ComponentRecovery: {opts.RecoveryVerifier},
+	f.manifestVerifiers = make(map[string][]note.Verifier)
+	if v := opts.AppletVerifier; v != nil {
+		f.manifestVerifiers[ftlog.ComponentApplet] = []note.Verifier{v}
+	}
+	if v := opts.BootVerifier; v != nil {
+		f.manifestVerifiers[ftlog.ComponentBoot] = []note.Verifier{v}
+	}
+	if v := opts.OSVerifiers; len(v) > 0 {
+		f.manifestVerifiers[ftlog.ComponentOS] = v[:]
+	}
+	if v := opts.RecoveryVerifier; v != nil {
+		f.manifestVerifiers[ftlog.ComponentRecovery] = []note.Verifier{v}
 	}
 	// IFF we were provided the previously used checkpoint, we'll override the
 	// log index at which we'll start scanning.
