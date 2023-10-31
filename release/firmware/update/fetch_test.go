@@ -17,6 +17,7 @@ package update
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
@@ -49,29 +50,34 @@ const (
 
 func TestBinPath(t *testing.T) {
 	for _, test := range []struct {
-		r    ftlog.FirmwareRelease
-		want string
+		name    string
+		r       ftlog.FirmwareRelease
+		want    string
+		wantErr bool
 	}{
 		{
-			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
-			want: "trusted-os/1.0.1/trusted_os.elf",
+			name: "Path From Firmware Hash",
+			r:    ftlog.FirmwareRelease{FirmwareDigestSha256: []byte{0x12, 0x34, 0x56, 0x78}},
+			want: fmt.Sprintf("%064s", "12345678"),
 		}, {
-			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.9.1")},
-			want: "trusted-os/1.9.1/trusted_os.elf",
+			name: "Other fields ignored",
+			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.9.1"), FirmwareDigestSha256: []byte{0x12, 0x34, 0x56, 0x78}},
+			want: fmt.Sprintf("%064s", "12345678"),
 		}, {
-			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentApplet, GitTagName: *semver.New("7.7.7")},
-			want: "trusted-applet/7.7.7/trusted_applet.elf",
-		}, {
-			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentBoot, GitTagName: *semver.New("0.0.0")},
-			want: "boot/0.0.0/armored-witness-boot.imx",
-		}, {
-			r:    ftlog.FirmwareRelease{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("2.0.0")},
-			want: "recovery/2.0.0/armory-ums.imx",
+			name:    "Digest unset is an error",
+			r:       ftlog.FirmwareRelease{Component: ftlog.ComponentApplet, GitTagName: *semver.New("7.7.7")},
+			wantErr: true,
 		},
 	} {
-		if got, _ := BinaryPath(test.r); got != test.want {
-			t.Errorf("Got %q want %q", got, test.want)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			got, err := BinaryPath(test.r)
+			if gotErr := err != nil; gotErr != test.wantErr {
+				t.Fatalf("got err %v, want err %v", err, test.wantErr)
+			}
+			if got != test.want {
+				t.Fatalf("Got %q want %q", got, test.want)
+			}
+		})
 	}
 }
 
