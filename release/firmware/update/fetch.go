@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"sync"
 
 	"github.com/coreos/go-semver/semver"
@@ -66,25 +65,10 @@ type FetcherOpts struct {
 
 // BinaryPath returns the relative path within a bucket for the binary referenced by the manifest.
 func BinaryPath(fr ftlog.FirmwareRelease) (string, error) {
-	dir := ""
-	file := ""
-	switch fr.Component {
-	case ftlog.ComponentApplet:
-		dir = "trusted-applet"
-		file = "trusted_applet.elf"
-	case ftlog.ComponentBoot:
-		dir = "boot"
-		file = "armored-witness-boot.imx"
-	case ftlog.ComponentOS:
-		dir = "trusted-os"
-		file = "trusted_os.elf"
-	case ftlog.ComponentRecovery:
-		dir = "recovery"
-		file = "armory-ums.imx"
-	default:
-		return "", fmt.Errorf("unrecognised component %q", fr.Component)
+	if len(fr.FirmwareDigestSha256) == 0 {
+		return "", errors.New("firmware digest unset")
 	}
-	return url.JoinPath(dir, fr.GitTagName.String(), file)
+	return fmt.Sprintf("%064x", fr.FirmwareDigestSha256), nil
 }
 
 // NewFetcher returns an implementation of a Remote that uses the given log client to
