@@ -8,7 +8,7 @@ require (
 	github.com/transparency-dev/armored-witness-applet v0.0.0-20230918140527-29dcafed830b
 	github.com/transparency-dev/formats v0.0.0-20230920083814-0f75b1d4e813
 	github.com/transparency-dev/merkle v0.0.2
-	golang.org/x/mod v0.14.0
+	golang.org/x/mod v0.15.0
 )
 
 require (
