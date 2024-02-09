@@ -63,4 +63,21 @@ type FirmwareRelease struct {
 	//
 	// [Tamago]: https://github.com/usbarmory/tamago
 	TamagoVersion semver.Version `json:"tamago_version"`
+
+	// HAB holds a signature and related data for firmware which must be authenticated
+	// by the device's mask ROM at boot.
+	// Currently, this is only meaningful for Bootloader and Recovery firmware images.
+	HAB HAB `json:"hab"`
+}
+
+// HAB holds information relating to SecureBoot.
+type HAB struct {
+	// Target identifies the class of device for which the signature below is expected to be valid.
+	// Examples might be "ci", "wave0", etc.
+	Target string `json:"target"`
+
+	// Signature is the "Secure Boot" signature for Bootloader and Recovery firmware images.
+	// This signature is verified by the device's mask ROM when the device has been fused into
+	// HAB mode.
+	Signature []byte `json:"signature"`
 }
