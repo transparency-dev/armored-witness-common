@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/transparency-dev/armored-witness-applet/api"
+	"github.com/transparency-dev/armored-witness-common/release/firmware/ftlog"
 )
 
 func TestParseFirmwareRelease(t *testing.T) {
@@ -31,11 +31,11 @@ func TestParseFirmwareRelease(t *testing.T) {
 		t.Fatalf("ReadFile: %v", err)
 	}
 
-	r := api.FirmwareRelease{}
+	r := ftlog.FirmwareRelease{}
 	if err := json.Unmarshal(bs, &r); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
-	if got, want := r.Component, api.ComponentApplet; got != want {
+	if got, want := r.Component, ftlog.ComponentApplet; got != want {
 		t.Errorf("Got %q, want %q", got, want)
 	}
 	if got, want := r.GitTagName, *semver.New("0.1.2"); got != want {
