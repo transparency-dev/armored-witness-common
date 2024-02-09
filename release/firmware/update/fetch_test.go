@@ -282,8 +282,8 @@ func TestFetcher(t *testing.T) {
 	}
 }
 
-func getBinary(_ context.Context, release ftlog.FirmwareRelease) ([]byte, error) {
-	return []byte(release.GitTagName.String()), nil
+func getBinary(_ context.Context, release ftlog.FirmwareRelease) ([]byte, []byte, error) {
+	return []byte(release.GitTagName.String()), nil, nil
 }
 
 func mustNewVerifierSigner(t *testing.T, vk, sk string) (note.Verifier, note.Signer) {

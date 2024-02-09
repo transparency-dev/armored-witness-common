@@ -56,6 +56,12 @@ func TestParseFirmwareRelease(t *testing.T) {
 	if got, want := r.TamagoVersion, *semver.New("1.20.6"); got != want {
 		t.Errorf("Got %q, want %q", got, want)
 	}
+	if got, want := r.HAB.Target, "ci"; got != want {
+		t.Errorf("Got %q, want %q", got, want)
+	}
+	if got, want := r.HAB.SignatureDigestSha256, mustDecode("8l4TaroPsSq+zwG+XMPZw+EdpUoXH0IT4cKM2RmFyNE="); !bytes.Equal(got, want) {
+		t.Errorf("Got %x, want %x", got, want)
+	}
 }
 
 func mustDecode(in string) []byte {

@@ -76,8 +76,6 @@ type HAB struct {
 	// Examples might be "ci", "wave0", etc.
 	Target string `json:"target"`
 
-	// Signature is the "Secure Boot" signature for Bootloader and Recovery firmware images.
-	// This signature is verified by the device's mask ROM when the device has been fused into
-	// HAB mode.
-	Signature []byte `json:"signature"`
+	// SignatureDigestSha256 is has of the "Secure Boot" signature for Bootloader and Recovery firmware images.
+	SignatureDigestSha256 []byte `json:"signature_digest_sha256"`
 }
