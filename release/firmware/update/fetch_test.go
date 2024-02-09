@@ -97,9 +97,10 @@ func TestFetcher(t *testing.T) {
 	}
 
 	for _, test := range []struct {
-		desc     string
-		releases [][]ftlog.FirmwareRelease
-		want     [][]ftlog.FirmwareRelease
+		desc      string
+		habTarget string
+		releases  [][]ftlog.FirmwareRelease
+		want      [][]ftlog.FirmwareRelease
 	}{
 		{
 			desc: "Rolling updates",
@@ -127,6 +128,31 @@ func TestFetcher(t *testing.T) {
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.3.1")},
 					{Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
 					{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+				},
+			},
+		}, {
+			desc:      "Rolling updates filtering by HAB Target",
+			habTarget: "apple", // only match HAB signed firmware targetting "apple" devices
+			releases: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+				},
+				{
+					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.4.1")},
+					{HAB: ftlog.HAB{Target: "banana"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.8.1")}, // this should be ignored
+				},
+			},
+			want: [][]ftlog.FirmwareRelease{
+				{
+					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+				},
+				{
+					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.4.1")},
+					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 				},
 			},
 		}, {
@@ -207,7 +233,8 @@ func TestFetcher(t *testing.T) {
 					BootVerifier:          bv,
 					OSVerifiers:           [2]note.Verifier{ov1, ov2},
 					RecoveryVerifier:      rv,
-					PreviousCheckpointRaw: nil})
+					PreviousCheckpointRaw: nil,
+					HABTarget:             test.habTarget})
 				if err != nil {
 					t.Fatalf("NewLogFetcher: %v", err)
 				}

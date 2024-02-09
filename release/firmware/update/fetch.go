@@ -56,6 +56,12 @@ type FetcherOpts struct {
 	// RecoveryVerifier is used to verify signatures on recovery manifests.
 	RecoveryVerifier note.Verifier
 
+	// HABTarget, if set, will require that manifest HAB.Target values must match for
+	// Bootloader and Recovery entries.
+	// This is to help ensure that HAB-fused devices get boot firmware with the correct
+	// signature.
+	HABTarget string
+
 	// PreviousCheckpointRaw is optional and should contain the raw bytes of the checkpoint
 	// used during the last firmware update.
 	// Leaving this unset will cause the Fetcher to consider all entries in the log, rather than
@@ -92,6 +98,7 @@ func NewFetcher(ctx context.Context, opts FetcherOpts) (*Fetcher, error) {
 		logOrigin:   opts.LogOrigin,
 		logState:    ls,
 		binFetcher:  opts.BinaryFetcher,
+		habTarget:   opts.HABTarget,
 		scanFrom:    0,
 	}
 	f.manifestVerifiers = make(map[string][]note.Verifier)
@@ -123,6 +130,7 @@ type Fetcher struct {
 	logFetcher  client.Fetcher
 	logOrigin   string
 	logVerifier note.Verifier
+	habTarget   string
 
 	binFetcher BinaryFetcher
 
@@ -246,6 +254,11 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 		manifest, err := parseLeaf(leaf, f.manifestVerifiers)
 		if err != nil {
 			klog.Errorf("failed to parse leaf at %d: %v", i, err)
+			continue
+		}
+		isHABComponent := manifest.Component == ftlog.ComponentBoot || manifest.Component == ftlog.ComponentRecovery
+		if isHABComponent && f.habTarget != "" && f.habTarget != manifest.HAB.Target {
+			klog.V(1).Infof("Skipping leaf %d as manifest hab target %q != required target %q", i, manifest.HAB.Target, f.habTarget)
 			continue
 		}
 		bundle := &firmware.Bundle{
