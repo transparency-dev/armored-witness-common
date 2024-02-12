@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/transparency-dev/armored-witness-applet/api"
+	"github.com/transparency-dev/armored-witness-common/release/firmware/ftlog"
 )
 
 func TestParseFirmwareRelease(t *testing.T) {
@@ -31,11 +31,11 @@ func TestParseFirmwareRelease(t *testing.T) {
 		t.Fatalf("ReadFile: %v", err)
 	}
 
-	r := api.FirmwareRelease{}
+	r := ftlog.FirmwareRelease{}
 	if err := json.Unmarshal(bs, &r); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
-	if got, want := r.Component, api.ComponentApplet; got != want {
+	if got, want := r.Component, ftlog.ComponentApplet; got != want {
 		t.Errorf("Got %q, want %q", got, want)
 	}
 	if got, want := r.GitTagName, *semver.New("0.1.2"); got != want {
@@ -55,6 +55,12 @@ func TestParseFirmwareRelease(t *testing.T) {
 	}
 	if got, want := r.TamagoVersion, *semver.New("1.20.6"); got != want {
 		t.Errorf("Got %q, want %q", got, want)
+	}
+	if got, want := r.HAB.Target, "ci"; got != want {
+		t.Errorf("Got %q, want %q", got, want)
+	}
+	if got, want := r.HAB.SignatureDigestSha256, mustDecode("8l4TaroPsSq+zwG+XMPZw+EdpUoXH0IT4cKM2RmFyNE="); !bytes.Equal(got, want) {
+		t.Errorf("Got %x, want %x", got, want)
 	}
 }
 

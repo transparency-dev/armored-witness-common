@@ -33,8 +33,8 @@ import (
 	"github.com/transparency-dev/serverless-log/client"
 )
 
-// BinaryFetcher returns the firmware image corresponding to the given release.
-type BinaryFetcher func(context.Context, ftlog.FirmwareRelease) ([]byte, error)
+// BinaryFetcher returns the firmware image and HAB signature (if applicable) corresponding to the given release.
+type BinaryFetcher func(context.Context, ftlog.FirmwareRelease) ([]byte, []byte, error)
 
 // FetcherOpts holds configuration options for creating a new Fetcher.
 type FetcherOpts struct {
@@ -56,6 +56,12 @@ type FetcherOpts struct {
 	// RecoveryVerifier is used to verify signatures on recovery manifests.
 	RecoveryVerifier note.Verifier
 
+	// HABTarget, if set, will require that manifest HAB.Target values must match for
+	// Bootloader and Recovery entries.
+	// This is to help ensure that HAB-fused devices get boot firmware with the correct
+	// signature.
+	HABTarget string
+
 	// PreviousCheckpointRaw is optional and should contain the raw bytes of the checkpoint
 	// used during the last firmware update.
 	// Leaving this unset will cause the Fetcher to consider all entries in the log, rather than
@@ -69,6 +75,14 @@ func BinaryPath(fr ftlog.FirmwareRelease) (string, error) {
 		return "", errors.New("firmware digest unset")
 	}
 	return fmt.Sprintf("%064x", fr.FirmwareDigestSha256), nil
+}
+
+// HABSignaturePath returns the relative path within a bucket for the HAB signature referenced by the manifest.
+func HABSignaturePath(fr ftlog.FirmwareRelease) (string, error) {
+	if len(fr.HAB.SignatureDigestSha256) == 0 {
+		return "", errors.New("HAB signature digest unset")
+	}
+	return fmt.Sprintf("%064x", fr.HAB.SignatureDigestSha256), nil
 }
 
 // NewFetcher returns an implementation of a Remote that uses the given log client to
@@ -92,6 +106,7 @@ func NewFetcher(ctx context.Context, opts FetcherOpts) (*Fetcher, error) {
 		logOrigin:   opts.LogOrigin,
 		logState:    ls,
 		binFetcher:  opts.BinaryFetcher,
+		habTarget:   opts.HABTarget,
 		scanFrom:    0,
 	}
 	f.manifestVerifiers = make(map[string][]note.Verifier)
@@ -123,6 +138,7 @@ type Fetcher struct {
 	logFetcher  client.Fetcher
 	logOrigin   string
 	logVerifier note.Verifier
+	habTarget   string
 
 	binFetcher BinaryFetcher
 
@@ -152,7 +168,7 @@ func (f *Fetcher) GetOS(ctx context.Context) (firmware.Bundle, error) {
 		return firmware.Bundle{}, errors.New("no latest OS available")
 	}
 	if f.latestOS.bundle.Firmware == nil {
-		binary, err := f.binFetcher(ctx, f.latestOS.manifest)
+		binary, _, err := f.binFetcher(ctx, f.latestOS.manifest)
 		if err != nil {
 			return firmware.Bundle{}, fmt.Errorf("BinaryFetcher(): %v", err)
 		}
@@ -169,7 +185,7 @@ func (f *Fetcher) GetApplet(ctx context.Context) (firmware.Bundle, error) {
 		return firmware.Bundle{}, errors.New("no latest applet available")
 	}
 	if f.latestApplet.bundle.Firmware == nil {
-		binary, err := f.binFetcher(ctx, f.latestApplet.manifest)
+		binary, _, err := f.binFetcher(ctx, f.latestApplet.manifest)
 		if err != nil {
 			return firmware.Bundle{}, fmt.Errorf("BinaryFetcher(): %v", err)
 		}
@@ -186,11 +202,12 @@ func (f *Fetcher) GetBoot(ctx context.Context) (firmware.Bundle, error) {
 		return firmware.Bundle{}, errors.New("no latest boot available")
 	}
 	if f.latestBoot.bundle.Firmware == nil {
-		binary, err := f.binFetcher(ctx, f.latestBoot.manifest)
+		binary, habSig, err := f.binFetcher(ctx, f.latestBoot.manifest)
 		if err != nil {
 			return firmware.Bundle{}, fmt.Errorf("BinaryFetcher(): %v", err)
 		}
 		f.latestBoot.bundle.Firmware = binary
+		f.latestBoot.bundle.HABSignature = habSig
 	}
 	return *f.latestBoot.bundle, nil
 }
@@ -203,11 +220,12 @@ func (f *Fetcher) GetRecovery(ctx context.Context) (firmware.Bundle, error) {
 		return firmware.Bundle{}, errors.New("no latest recovery available")
 	}
 	if f.latestRecovery.bundle.Firmware == nil {
-		binary, err := f.binFetcher(ctx, f.latestRecovery.manifest)
+		binary, habSig, err := f.binFetcher(ctx, f.latestRecovery.manifest)
 		if err != nil {
 			return firmware.Bundle{}, fmt.Errorf("BinaryFetcher(): %v", err)
 		}
 		f.latestRecovery.bundle.Firmware = binary
+		f.latestRecovery.bundle.HABSignature = habSig
 	}
 	return *f.latestRecovery.bundle, nil
 }
@@ -246,6 +264,11 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 		manifest, err := parseLeaf(leaf, f.manifestVerifiers)
 		if err != nil {
 			klog.Errorf("failed to parse leaf at %d: %v", i, err)
+			continue
+		}
+		isHABComponent := manifest.Component == ftlog.ComponentBoot || manifest.Component == ftlog.ComponentRecovery
+		if isHABComponent && f.habTarget != "" && f.habTarget != manifest.HAB.Target {
+			klog.V(1).Infof("Skipping leaf %d as manifest hab target %q != required target %q", i, manifest.HAB.Target, f.habTarget)
 			continue
 		}
 		bundle := &firmware.Bundle{

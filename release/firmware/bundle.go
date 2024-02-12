@@ -33,4 +33,6 @@ type Bundle struct {
 	Manifest []byte
 	// Firmware is the elf executable data committed to by Manifest.
 	Firmware []byte
+	// HABSignature holds the signature bytes, if applicable to this firmware type.
+	HABSignature []byte
 }

@@ -97,9 +97,10 @@ func TestFetcher(t *testing.T) {
 	}
 
 	for _, test := range []struct {
-		desc     string
-		releases [][]ftlog.FirmwareRelease
-		want     [][]ftlog.FirmwareRelease
+		desc      string
+		habTarget string
+		releases  [][]ftlog.FirmwareRelease
+		want      [][]ftlog.FirmwareRelease
 	}{
 		{
 			desc: "Rolling updates",
@@ -127,6 +128,31 @@ func TestFetcher(t *testing.T) {
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.3.1")},
 					{Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
 					{Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+				},
+			},
+		}, {
+			desc:      "Rolling updates filtering by HAB Target",
+			habTarget: "orange", // only match HAB signed firmware targetting "orange" devices
+			releases: [][]ftlog.FirmwareRelease{
+				{
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+				},
+				{
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.4.1")},
+					{HAB: ftlog.HAB{Target: "banana"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.8.1")}, // this should be ignored
+				},
+			},
+			want: [][]ftlog.FirmwareRelease{
+				{
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+				},
+				{
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.4.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 				},
 			},
 		}, {
@@ -173,14 +199,14 @@ func TestFetcher(t *testing.T) {
 				{
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+banana")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+banana")},
-					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+apple")},
-					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+apple")},
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+orange")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+orange")},
 				},
 			},
 			want: [][]ftlog.FirmwareRelease{
 				{
-					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+apple")},
-					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+apple")},
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+orange")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+orange")},
 				},
 			},
 		},
@@ -207,7 +233,8 @@ func TestFetcher(t *testing.T) {
 					BootVerifier:          bv,
 					OSVerifiers:           [2]note.Verifier{ov1, ov2},
 					RecoveryVerifier:      rv,
-					PreviousCheckpointRaw: nil})
+					PreviousCheckpointRaw: nil,
+					HABTarget:             test.habTarget})
 				if err != nil {
 					t.Fatalf("NewLogFetcher: %v", err)
 				}
@@ -255,8 +282,8 @@ func TestFetcher(t *testing.T) {
 	}
 }
 
-func getBinary(_ context.Context, release ftlog.FirmwareRelease) ([]byte, error) {
-	return []byte(release.GitTagName.String()), nil
+func getBinary(_ context.Context, release ftlog.FirmwareRelease) ([]byte, []byte, error) {
+	return []byte(release.GitTagName.String()), nil, nil
 }
 
 func mustNewVerifierSigner(t *testing.T, vk, sk string) (note.Verifier, note.Signer) {
