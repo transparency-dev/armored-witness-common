@@ -76,6 +76,6 @@ type HAB struct {
 	// Examples might be "ci", "wave0", etc.
 	Target string `json:"target"`
 
-	// SignatureDigestSha256 is has of the "Secure Boot" signature for Bootloader and Recovery firmware images.
+	// SignatureDigestSha256 is the hash of the "Secure Boot" signature for Bootloader and Recovery firmware images.
 	SignatureDigestSha256 []byte `json:"signature_digest_sha256"`
 }

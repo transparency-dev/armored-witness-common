@@ -132,27 +132,27 @@ func TestFetcher(t *testing.T) {
 			},
 		}, {
 			desc:      "Rolling updates filtering by HAB Target",
-			habTarget: "apple", // only match HAB signed firmware targetting "apple" devices
+			habTarget: "orange", // only match HAB signed firmware targetting "orange" devices
 			releases: [][]ftlog.FirmwareRelease{
 				{
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1")},
-					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
-					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 				},
 				{
-					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.4.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.4.1")},
 					{HAB: ftlog.HAB{Target: "banana"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.8.1")}, // this should be ignored
 				},
 			},
 			want: [][]ftlog.FirmwareRelease{
 				{
-					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
-					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.3.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 				},
 				{
-					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.4.1")},
-					{HAB: ftlog.HAB{Target: "apple"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentBoot, GitTagName: *semver.New("1.4.1")},
+					{HAB: ftlog.HAB{Target: "orange"}, Component: ftlog.ComponentRecovery, GitTagName: *semver.New("1.1.1")},
 				},
 			},
 		}, {
@@ -199,14 +199,14 @@ func TestFetcher(t *testing.T) {
 				{
 					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+banana")},
 					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+banana")},
-					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+apple")},
-					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+apple")},
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+orange")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+orange")},
 				},
 			},
 			want: [][]ftlog.FirmwareRelease{
 				{
-					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+apple")},
-					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+apple")},
+					{Component: ftlog.ComponentOS, GitTagName: *semver.New("1.0.1+orange")},
+					{Component: ftlog.ComponentApplet, GitTagName: *semver.New("1.1.1+orange")},
 				},
 			},
 		},
