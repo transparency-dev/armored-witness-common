@@ -4,6 +4,10 @@
     "git_commit_fingerprint": "aac1e176cfac1a1e079b5f624b83fda54b5d0f76",
     "firmware_digest_sha256": "8l4TaroPsSq+zwG+XMPZw+EdpUoXH0IT4cKM2RmFyNE=",
     "tamago_version": "1.20.6",
+    "build_envs": [
+        "DEBUG=1",
+        "CHECK=no"
+    ],
     "hab": {
         "target": "ci",
         "signature_digest_sha256": "8l4TaroPsSq+zwG+XMPZw+EdpUoXH0IT4cKM2RmFyNE="
