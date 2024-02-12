@@ -64,6 +64,10 @@ type FirmwareRelease struct {
 	// [Tamago]: https://github.com/usbarmory/tamago
 	TamagoVersion semver.Version `json:"tamago_version"`
 
+	// BuildEnvs contains all environment variables set for this build. Each value in the string
+	// array will be a single key/value assignment, such as "DEBUG=1".
+	BuildEnvs []string `json:"build_envs"`
+
 	// HAB holds a signature and related data for firmware which must be authenticated
 	// by the device's mask ROM at boot.
 	// Currently, this is only meaningful for Bootloader and Recovery firmware images.

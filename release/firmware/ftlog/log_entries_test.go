@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
@@ -54,6 +55,9 @@ func TestParseFirmwareRelease(t *testing.T) {
 		t.Errorf("Got %x, want %x", got, want)
 	}
 	if got, want := r.TamagoVersion, *semver.New("1.20.6"); got != want {
+		t.Errorf("Got %q, want %q", got, want)
+	}
+	if got, want := r.BuildEnvs, []string{"DEBUG=1", "CHECK=no"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Got %q, want %q", got, want)
 	}
 	if got, want := r.HAB.Target, "ci"; got != want {
