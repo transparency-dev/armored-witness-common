@@ -78,7 +78,7 @@ func BinaryPath(fr ftlog.FirmwareRelease) (string, error) {
 }
 
 // HABSignaturePath returns the relative path within a bucket for the HAB signature referenced by the manifest.
-func HABSignarePath(fr ftlog.FirmwareRelease) (string, error) {
+func HABSignaturePath(fr ftlog.FirmwareRelease) (string, error) {
 	if len(fr.HAB.SignatureDigestSha256) == 0 {
 		return "", errors.New("HAB signature digest unset")
 	}
