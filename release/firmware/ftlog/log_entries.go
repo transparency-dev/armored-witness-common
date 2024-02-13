@@ -66,7 +66,7 @@ type FirmwareRelease struct {
 
 	// BuildEnvs contains all environment variables set for this build. Each value in the string
 	// array will be a single key/value assignment, such as "DEBUG=1".
-	BuildEnvs []string `json:"build_envs"`
+	BuildEnvs []string `json:"build_envs,omitempty"`
 
 	// HAB holds a signature and related data for firmware which must be authenticated
 	// by the device's mask ROM at boot.
