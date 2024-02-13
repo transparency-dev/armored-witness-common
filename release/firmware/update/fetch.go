@@ -79,6 +79,9 @@ func BinaryPath(fr ftlog.FirmwareRelease) (string, error) {
 
 // HABSignaturePath returns the relative path within a bucket for the HAB signature referenced by the manifest.
 func HABSignaturePath(fr ftlog.FirmwareRelease) (string, error) {
+	if fr.HAB == nil {
+		return "", errors.New("no HAB information in manifest")
+	}
 	if len(fr.HAB.SignatureDigestSha256) == 0 {
 		return "", errors.New("HAB signature digest unset")
 	}
@@ -267,8 +270,12 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 			continue
 		}
 		isHABComponent := manifest.Component == ftlog.ComponentBoot || manifest.Component == ftlog.ComponentRecovery
-		if isHABComponent && f.habTarget != "" && f.habTarget != manifest.HAB.Target {
-			klog.V(1).Infof("Skipping leaf %d as manifest hab target %q != required target %q", i, manifest.HAB.Target, f.habTarget)
+		if isHABComponent && f.habTarget != "" && (manifest.HAB == nil || f.habTarget != manifest.HAB.Target) {
+			mt := "nil"
+			if manifest.HAB != nil {
+				mt = manifest.HAB.Target
+			}
+			klog.V(1).Infof("Skipping leaf %d as manifest hab target %q != required target %q", i, mt, f.habTarget)
 			continue
 		}
 		bundle := &firmware.Bundle{
