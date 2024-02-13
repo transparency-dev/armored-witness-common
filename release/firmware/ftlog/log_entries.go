@@ -71,7 +71,7 @@ type FirmwareRelease struct {
 	// HAB holds a signature and related data for firmware which must be authenticated
 	// by the device's mask ROM at boot.
 	// Currently, this is only meaningful for Bootloader and Recovery firmware images.
-	HAB HAB `json:"hab"`
+	HAB *HAB `json:"hab,omitempty"`
 }
 
 // HAB holds information relating to SecureBoot.
