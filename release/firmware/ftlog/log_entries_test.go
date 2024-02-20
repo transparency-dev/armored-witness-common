@@ -36,28 +36,31 @@ func TestParseFirmwareRelease(t *testing.T) {
 	if err := json.Unmarshal(bs, &r); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
+	if got, want := r.SchemaVersion, 1; got != want {
+		t.Errorf("Got %q, want %q", got, want)
+	}
 	if got, want := r.Component, ftlog.ComponentApplet; got != want {
 		t.Errorf("Got %q, want %q", got, want)
 	}
-	if got, want := r.GitTagName, *semver.New("0.1.2"); got != want {
+	if got, want := r.Git.TagName, *semver.New("0.1.2"); got != want {
 		t.Errorf("Got %q, want %q", got, want)
 	}
-	if got, want := len(r.GitCommitFingerprint), 40; got != want {
+	if got, want := len(r.Git.CommitFingerprint), 40; got != want {
 		t.Errorf("Got %d, want %d", got, want)
 	}
-	if got, want := r.GitCommitFingerprint, "aac1e176cfac1a1e079b5f624b83fda54b5d0f76"; got != want {
+	if got, want := r.Git.CommitFingerprint, "aac1e176cfac1a1e079b5f624b83fda54b5d0f76"; got != want {
 		t.Errorf("Got %x, want %x", got, want)
 	}
-	if got, want := len(r.FirmwareDigestSha256), 32; got != want {
+	if got, want := len(r.Output.FirmwareDigestSha256), 32; got != want {
 		t.Errorf("Got %d, want %d", got, want)
 	}
-	if got, want := r.FirmwareDigestSha256, mustDecode("8l4TaroPsSq+zwG+XMPZw+EdpUoXH0IT4cKM2RmFyNE="); !bytes.Equal(got, want) {
+	if got, want := r.Output.FirmwareDigestSha256, mustDecode("8l4TaroPsSq+zwG+XMPZw+EdpUoXH0IT4cKM2RmFyNE="); !bytes.Equal(got, want) {
 		t.Errorf("Got %x, want %x", got, want)
 	}
-	if got, want := r.TamagoVersion, *semver.New("1.20.6"); got != want {
+	if got, want := r.Build.TamagoVersion, *semver.New("1.20.6"); got != want {
 		t.Errorf("Got %q, want %q", got, want)
 	}
-	if got, want := r.BuildEnvs, []string{"DEBUG=1", "CHECK=no"}; !reflect.DeepEqual(got, want) {
+	if got, want := r.Build.Envs, []string{"DEBUG=1", "CHECK=no"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Got %q, want %q", got, want)
 	}
 	if got, want := r.HAB.Target, "ci"; got != want {

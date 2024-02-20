@@ -66,7 +66,7 @@ func (v *BundleVerifier) Verify(b Bundle) (*ftlog.FirmwareRelease, error) {
 	}
 
 	h := sha256.Sum256(b.Firmware)
-	if manifestHash, calculatedHash := manifest.FirmwareDigestSha256, h[:]; !bytes.Equal(manifestHash, calculatedHash) {
+	if manifestHash, calculatedHash := manifest.Output.FirmwareDigestSha256, h[:]; !bytes.Equal(manifestHash, calculatedHash) {
 		return nil, fmt.Errorf("firmware hash mismatch: manifest says %x but firmware bytes hash to %x", manifestHash, calculatedHash)
 	}
 	return &manifest, nil
