@@ -31,6 +31,11 @@ const (
 
 // FirmwareRelease represents a firmware release in the log.
 type FirmwareRelease struct {
+	// SchemaVersion gives a unique ID for this version of the schema. This will be
+	// incremented when there are breaking changes to the schema that all clients
+	// should be aware of.
+	SchemaVersion string `json:"schema_version"`
+
 	// Component identifies the type of firmware (e.g. OS or applet).
 	// This component is key to disambiguate what the firmware is, and other
 	// implicit information can be derived from this. For example, the git
@@ -38,40 +43,59 @@ type FirmwareRelease struct {
 	// build.
 	Component string `json:"component"`
 
-	// GitTagName identifies the version of this release, e.g. "0.1.2"
-	GitTagName semver.Version `json:"git_tag_name"`
+	// Git contains information about the origin of the code used to build this release.
+	Git Git `json:"git"`
 
-	// GitCommitFingerprint contains the hex-encoded SHA-1 commit hash of the git repository when checked
+	// Build contains information about the toolchain used to build this release.
+	Build Build `json:"build"`
+
+	// Output contains commitments to the binaries distributed in this release.
+	Output Output `json:"output"`
+
+	// HAB holds a signature and related data for firmware which must be authenticated
+	// by the device's mask ROM at boot.
+	// Currently, this is only meaningful for Bootloader and Recovery firmware images.
+	HAB *HAB `json:"hab,omitempty"`
+}
+
+// Git holds information about the source from which the binary was built.
+type Git struct {
+	// TagName identifies the version of this release, e.g. "0.1.2"
+	TagName semver.Version `json:"tag_name"`
+
+	// CommitFingerprint contains the hex-encoded SHA-1 commit hash of the git repository when checked
 	// out at TagName. Committing to this information allows verifiers that cannot
 	// reproduce a build to quickly narrow down the problem space:
-	//  - if this GitCommitFingerprint is different then they have checked out different code
+	//  - if this CommitFingerprint is different then they have checked out different code
 	//    than was used to build the binary. This could happen if the wrong repo was
 	//    used, or because the TagName was changed to a different commit
-	//  - if the GitCommitFingerprint is the same, then they have the same code checked out but
+	//  - if the CommitFingerprint is the same, then they have the same code checked out but
 	//    there is a problem with the build toolchain (different tooling or non-reproducible
 	//    builds).
-	GitCommitFingerprint string `json:"git_commit_fingerprint"`
+	CommitFingerprint string `json:"commit_fingerprint"`
+}
 
-	// FirmwareDigestSha256 is the hash of the compiled firmware binary. Believers that are
-	// installing a firmware release must check that the firmware data they are going to
-	// believe has a fingerprint matching this hash. Verifiers that check out the correct
-	// source repo & version must be able to reproducibly build a binary that has this fingerprint.
-	FirmwareDigestSha256 []byte `json:"firmware_digest_sha256"`
-
+// Build holds information about the build toolchain and methodology for turning the source
+// into the binary.
+type Build struct {
 	// TamagoVersion identifies the version of [Tamago] that the builder used to compile
 	// the binary with FirmwareDigestSha256.
 	//
 	// [Tamago]: https://github.com/usbarmory/tamago
 	TamagoVersion semver.Version `json:"tamago_version"`
 
-	// BuildEnvs contains all environment variables set for this build. Each value in the string
+	// Envs contains all environment variables set for this build. Each value in the string
 	// array will be a single key/value assignment, such as "DEBUG=1".
-	BuildEnvs []string `json:"build_envs,omitempty"`
+	Envs []string `json:"envs,omitempty"`
+}
 
-	// HAB holds a signature and related data for firmware which must be authenticated
-	// by the device's mask ROM at boot.
-	// Currently, this is only meaningful for Bootloader and Recovery firmware images.
-	HAB *HAB `json:"hab,omitempty"`
+// Output holds commitments to the binary artifacts that were produced.
+type Output struct {
+	// FirmwareDigestSha256 is the hash of the compiled firmware binary. Believers that are
+	// installing a firmware release must check that the firmware data they are going to
+	// believe has a fingerprint matching this hash. Verifiers that check out the correct
+	// source repo & version must be able to reproducibly build a binary that has this fingerprint.
+	FirmwareDigestSha256 []byte `json:"firmware_digest_sha256"`
 }
 
 // HAB holds information relating to SecureBoot.

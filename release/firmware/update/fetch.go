@@ -71,10 +71,10 @@ type FetcherOpts struct {
 
 // BinaryPath returns the relative path within a bucket for the binary referenced by the manifest.
 func BinaryPath(fr ftlog.FirmwareRelease) (string, error) {
-	if len(fr.FirmwareDigestSha256) == 0 {
+	if len(fr.Output.FirmwareDigestSha256) == 0 {
 		return "", errors.New("firmware digest unset")
 	}
-	return fmt.Sprintf("%064x", fr.FirmwareDigestSha256), nil
+	return fmt.Sprintf("%064x", fr.Output.FirmwareDigestSha256), nil
 }
 
 // HABSignaturePath returns the relative path within a bucket for the HAB signature referenced by the manifest.
@@ -160,7 +160,7 @@ func (f *Fetcher) GetLatestVersions(_ context.Context) (os semver.Version, apple
 	if f.latestOS == nil || f.latestApplet == nil {
 		return semver.Version{}, semver.Version{}, errors.New("no versions of OS or applet found in log")
 	}
-	return f.latestOS.manifest.GitTagName, f.latestApplet.manifest.GitTagName, nil
+	return f.latestOS.manifest.Git.TagName, f.latestApplet.manifest.Git.TagName, nil
 }
 
 func (f *Fetcher) GetOS(ctx context.Context) (firmware.Bundle, error) {
@@ -314,8 +314,8 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 // numbering.
 func highestRelease(current *firmwareRelease, candidate *firmwareRelease) *firmwareRelease {
 	if current == nil ||
-		current.manifest.GitTagName.LessThan(candidate.manifest.GitTagName) ||
-		current.manifest.GitTagName.Equal(candidate.manifest.GitTagName) {
+		current.manifest.Git.TagName.LessThan(candidate.manifest.Git.TagName) ||
+		current.manifest.Git.TagName.Equal(candidate.manifest.Git.TagName) {
 		return candidate
 	}
 	return current
