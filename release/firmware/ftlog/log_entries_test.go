@@ -36,6 +36,9 @@ func TestParseFirmwareRelease(t *testing.T) {
 	if err := json.Unmarshal(bs, &r); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
+	if got, want := r.SchemaVersion, 1; got != want {
+		t.Errorf("Got %q, want %q", got, want)
+	}
 	if got, want := r.Component, ftlog.ComponentApplet; got != want {
 		t.Errorf("Got %q, want %q", got, want)
 	}

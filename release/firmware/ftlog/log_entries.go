@@ -34,7 +34,7 @@ type FirmwareRelease struct {
 	// SchemaVersion gives a unique ID for this version of the schema. This will be
 	// incremented when there are breaking changes to the schema that all clients
 	// should be aware of.
-	SchemaVersion string `json:"schema_version"`
+	SchemaVersion int `json:"schema_version"`
 
 	// Component identifies the type of firmware (e.g. OS or applet).
 	// This component is key to disambiguate what the firmware is, and other
