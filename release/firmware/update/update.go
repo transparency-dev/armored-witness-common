@@ -97,8 +97,6 @@ func (u Updater) Update(ctx context.Context) error {
 		return fmt.Errorf("failed to get latest versions: %v", err)
 	}
 
-	klog.Infof("Installed (os: %v applet: %v)", u.osVer, u.appVer)
-	klog.Infof("Updates (os: %v applet: %v)", osVer, appVer)
 	if u.osVer.LessThan(osVer) {
 		klog.Infof("Upgrading OS from %q to %q", u.osVer, osVer)
 		bundle, err := u.remote.GetOS(ctx)
@@ -125,5 +123,6 @@ func (u Updater) Update(ctx context.Context) error {
 			return fmt.Errorf("failed to install applet firmware: %v", err)
 		}
 	}
+	klog.Infof("Self-update: no updates applied (os: %v applet: %v)", u.osVer, u.appVer)
 	return nil
 }
