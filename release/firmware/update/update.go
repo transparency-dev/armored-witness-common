@@ -123,6 +123,6 @@ func (u Updater) Update(ctx context.Context) error {
 			return fmt.Errorf("failed to install applet firmware: %v", err)
 		}
 	}
-	klog.Infof("Self-update: no updates applied (os: %v applet: %v)", u.osVer, u.appVer)
+	klog.V(1).Infof("Self-update: no updates applied (os: %v applet: %v)", u.osVer, u.appVer)
 	return nil
 }
