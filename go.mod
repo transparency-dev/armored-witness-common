@@ -12,7 +12,7 @@ require (
 
 require (
 	github.com/transparency-dev/serverless-log v0.0.0-20230922115421-a56a93b5681e
-	k8s.io/klog/v2 v2.120.1
+	k8s.io/klog/v2 v2.130.0
 )
 
 require github.com/go-logr/logr v1.4.1 // indirect
