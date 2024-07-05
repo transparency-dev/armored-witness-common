@@ -7,7 +7,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/transparency-dev/formats v0.0.0-20230920083814-0f75b1d4e813
 	github.com/transparency-dev/merkle v0.0.2
-	golang.org/x/mod v0.18.0
+	golang.org/x/mod v0.19.0
 )
 
 require (
