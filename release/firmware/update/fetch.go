@@ -239,34 +239,19 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	_, _, cpRaw, err := f.logState.Update(ctx)
+	session, err := f.NewSession(ctx)
 	if err != nil {
-		return fmt.Errorf("logState.Update(): %v", err)
-	}
-	to, _, _, err := log.ParseCheckpoint(cpRaw, f.logOrigin, f.logVerifier)
-	if err != nil {
-		return fmt.Errorf("ParseCheckpoint(): %v", err)
+		return err
 	}
 
-	if to.Size <= f.scanFrom {
+	if session.cp.Size <= f.scanFrom {
 		return nil
 	}
 
-	for i := f.scanFrom; i < to.Size; i++ {
-		leaf, err := client.GetLeaf(ctx, f.logFetcher, i)
+	for i := f.scanFrom; i < session.cp.Size; i++ {
+		bundle, manifest, err := session.Fetch(ctx, i)
 		if err != nil {
-			return fmt.Errorf("failed to get log leaf %d: %v", i, err)
-		}
-		incP, err := f.logState.ProofBuilder.InclusionProof(ctx, i)
-		if err != nil {
-			return fmt.Errorf("failed to get inclusion proof for leaf %d: %v", i, err)
-		}
-		if err := proof.VerifyInclusion(f.logState.Hasher, i, to.Size, f.logState.Hasher.HashLeaf(leaf), incP, to.Hash); err != nil {
-			return fmt.Errorf("invalid inclusion proof for leaf %d: %v", i, err)
-		}
-		manifest, err := parseLeaf(leaf, f.manifestVerifiers)
-		if err != nil {
-			klog.Errorf("failed to parse leaf at %d: %v", i, err)
+			klog.Errorf("Failed to verifiably fetch leaf at index %d: %v", i, err)
 			continue
 		}
 		isHABComponent := manifest.Component == ftlog.ComponentBoot || manifest.Component == ftlog.ComponentRecovery
@@ -278,29 +263,74 @@ func (f *Fetcher) Scan(ctx context.Context) error {
 			klog.V(1).Infof("Skipping leaf %d as manifest hab target %q != required target %q", i, mt, f.habTarget)
 			continue
 		}
-		bundle := &firmware.Bundle{
-			Checkpoint:     cpRaw,
-			Index:          i,
-			InclusionProof: incP,
-			Manifest:       leaf,
-			Firmware:       nil, // This will be downloaded on demand
-		}
-
 		switch manifest.Component {
 		case ftlog.ComponentOS:
-			f.latestOS = highestRelease(f.latestOS, &firmwareRelease{bundle: bundle, manifest: manifest})
+			f.latestOS = highestRelease(f.latestOS, &firmwareRelease{bundle: bundle, manifest: *manifest})
 		case ftlog.ComponentApplet:
-			f.latestApplet = highestRelease(f.latestApplet, &firmwareRelease{bundle: bundle, manifest: manifest})
+			f.latestApplet = highestRelease(f.latestApplet, &firmwareRelease{bundle: bundle, manifest: *manifest})
 		case ftlog.ComponentBoot:
-			f.latestBoot = highestRelease(f.latestBoot, &firmwareRelease{bundle: bundle, manifest: manifest})
+			f.latestBoot = highestRelease(f.latestBoot, &firmwareRelease{bundle: bundle, manifest: *manifest})
 		case ftlog.ComponentRecovery:
-			f.latestRecovery = highestRelease(f.latestRecovery, &firmwareRelease{bundle: bundle, manifest: manifest})
+			f.latestRecovery = highestRelease(f.latestRecovery, &firmwareRelease{bundle: bundle, manifest: *manifest})
 		default:
 			klog.Warningf("unknown component type in log: %q", manifest.Component)
 		}
 	}
-	f.scanFrom = to.Size
+	f.scanFrom = session.cp.Size
 	return nil
+}
+
+func (f *Fetcher) NewSession(ctx context.Context) (FetchSession, error) {
+	_, _, cpRaw, err := f.logState.Update(ctx)
+	if err != nil {
+		return FetchSession{}, fmt.Errorf("logState.Update(): %v", err)
+	}
+	to, _, _, err := log.ParseCheckpoint(cpRaw, f.logOrigin, f.logVerifier)
+	if err != nil {
+		return FetchSession{}, fmt.Errorf("ParseCheckpoint(): %v", err)
+	}
+
+	return FetchSession{
+		cpRaw:             cpRaw,
+		cp:                to,
+		logFetcher:        f.logFetcher,
+		logState:          f.logState,
+		manifestVerifiers: f.manifestVerifiers,
+	}, nil
+}
+
+type FetchSession struct {
+	cpRaw             []byte
+	cp                *log.Checkpoint
+	logFetcher        client.Fetcher
+	logState          client.LogStateTracker
+	manifestVerifiers map[string][]note.Verifier
+}
+
+func (s FetchSession) Fetch(ctx context.Context, i uint64) (*firmware.Bundle, *ftlog.FirmwareRelease, error) {
+	leaf, err := client.GetLeaf(ctx, s.logFetcher, i)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get log leaf %d: %v", i, err)
+	}
+	incP, err := s.logState.ProofBuilder.InclusionProof(ctx, i)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get inclusion proof for leaf %d: %v", i, err)
+	}
+	if err := proof.VerifyInclusion(s.logState.Hasher, i, s.cp.Size, s.logState.Hasher.HashLeaf(leaf), incP, s.cp.Hash); err != nil {
+		return nil, nil, fmt.Errorf("invalid inclusion proof for leaf %d: %v", i, err)
+	}
+	manifest, err := parseLeaf(leaf, s.manifestVerifiers)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse leaf at %d: %v", i, err)
+	}
+	bundle := &firmware.Bundle{
+		Checkpoint:     s.cpRaw,
+		Index:          i,
+		InclusionProof: incP,
+		Manifest:       leaf,
+		Firmware:       nil, // This will be downloaded on demand
+	}
+	return bundle, &manifest, nil
 }
 
 // highestRelease returns the "higher" of the two releases passed in according to SemVer rules.
