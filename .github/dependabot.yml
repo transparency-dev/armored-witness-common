@@ -16,3 +16,12 @@ updates:
   commit-message:
     prefix: ":seedling:"
     include: "scope"
+
+- package-ecosystem: github-actions
+  directory: /
+  groups:
+    all-gha-deps:
+      patterns:
+        - "*"
+  schedule:
+    interval: weekly
