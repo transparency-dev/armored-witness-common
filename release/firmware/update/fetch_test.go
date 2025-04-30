@@ -27,7 +27,6 @@ import (
 	"github.com/transparency-dev/serverless-log/testonly"
 	"golang.org/x/mod/sumdb/note"
 
-	"github.com/transparency-dev/formats/log"
 	fmtlog "github.com/transparency-dev/formats/log"
 	slog "github.com/transparency-dev/serverless-log/pkg/log"
 )
@@ -307,7 +306,7 @@ func addReleasesToLog(ctx context.Context, t *testing.T, ms *testonly.MemStorage
 	if err != nil {
 		t.Fatalf("Fetch checkpoint: %v", err)
 	}
-	cp, _, _, err := log.ParseCheckpoint(cpRaw, origin, lv)
+	cp, _, _, err := fmtlog.ParseCheckpoint(cpRaw, origin, lv)
 	if err != nil {
 		t.Fatalf("ParseCheckpoint: %v", err)
 	}
