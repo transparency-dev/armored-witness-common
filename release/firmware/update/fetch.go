@@ -356,7 +356,7 @@ func parseLeaf(leaf []byte, verifiers map[string][]note.Verifier) (ftlog.Firmwar
 	var err error
 	var expectedComponent string
 
-	klog.V(2).Infof(string(leaf))
+	klog.V(2).Infof("leaf:\n%s", string(leaf))
 
 	for k, v := range verifiers {
 		if n, err = note.Open(leaf, note.VerifierList(v...)); err != nil {
