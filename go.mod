@@ -7,7 +7,7 @@ toolchain go1.24.7
 require (
 	github.com/coreos/go-semver v0.3.1
 	github.com/golang/mock v1.6.0
-	github.com/transparency-dev/formats v0.0.0-20230920083814-0f75b1d4e813
+	github.com/transparency-dev/formats v0.1.0
 	github.com/transparency-dev/merkle v0.0.2
 	golang.org/x/mod v0.33.0
 )
