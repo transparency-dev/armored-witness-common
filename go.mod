@@ -1,15 +1,13 @@
 module github.com/transparency-dev/armored-witness-common
 
-go 1.24.0
-
-toolchain go1.24.7
+go 1.25.0
 
 require (
 	github.com/coreos/go-semver v0.3.1
 	github.com/golang/mock v1.6.0
 	github.com/transparency-dev/formats v0.1.0
 	github.com/transparency-dev/merkle v0.0.2
-	golang.org/x/mod v0.33.0
+	golang.org/x/mod v0.34.0
 )
 
 require (
